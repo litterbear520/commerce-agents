@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+import importlib
 import os
 
 import pytest
 
 from demo_common import host as host_module
-from demo_common import host_approval_default, load_demo_env, spawn_background
+from demo_common import host_approval_default, load_demo_env, model_override, spawn_background
 from demo_common.host import _background_tasks
 
 
@@ -20,6 +21,29 @@ def test_only_an_explicit_zero_turns_host_approval_off(monkeypatch, value, expec
     else:
         monkeypatch.setenv("MERCHANT_REQUIRE_HOST_APPROVAL", value)
     assert host_approval_default() is expected
+
+
+@pytest.mark.parametrize("value", [None, "", "  "])
+def test_no_model_override_without_a_non_blank_llm_model(monkeypatch, value):
+    if value is None:
+        monkeypatch.delenv("LLM_MODEL", raising=False)
+    else:
+        monkeypatch.setenv("LLM_MODEL", value)
+    assert model_override() == {}
+
+
+def test_llm_model_names_the_turn_loop_model(monkeypatch):
+    monkeypatch.setenv("LLM_MODEL", " claude-opus-5 ")
+    assert model_override() == {"model": "claude-opus-5"}
+
+
+@pytest.mark.parametrize("vertical", ["retail", "travel", "telecom", "entertainment"])
+def test_every_vertical_builds_both_configs_on_llm_model(monkeypatch, vertical):
+    monkeypatch.setenv("LLM_MODEL", "gateway-model")
+    agent_config = importlib.import_module(f"{vertical}.api.agent_config")
+
+    assert agent_config.build_shopping_config().model == "gateway-model"
+    assert agent_config.build_merchant_config("ACME").model == "gateway-model"
 
 
 @pytest.fixture

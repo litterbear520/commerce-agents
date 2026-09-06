@@ -46,8 +46,8 @@ guide for that route.
 
 The model is a string in the config. Each role config has `model` and `memory_model`; the
 merchant config adds `analysis_model`. The SDK runtimes copy the model into their options,
-and the manifests set it in `agent.yaml`. Nothing else reads the string, so a platform move
-is a config change. Id grammar differs by platform; confirm against your
+and the manifests set it in `agent.yaml`. The example APIs set `model` from `LLM_MODEL`
+when it is non-blank. Nothing else reads the string, so a platform move is a config change. Id grammar differs by platform; confirm against your
 platform's catalog.
 
 | Field | Repo default | Anthropic API, gateways | GCP Vertex AI | AWS Bedrock (Mantle) | AWS Bedrock (Invoke API) | Microsoft Foundry |

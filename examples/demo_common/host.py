@@ -72,6 +72,14 @@ def load_demo_env(example_root: Path) -> None:
         os.environ.pop("ANTHROPIC_BASE_URL", None)
 
 
+def model_override() -> dict[str, str]:
+    """The config fields ``LLM_MODEL`` sets: ``model``, the turn-loop model of both roles,
+    when the variable is non-blank; nothing otherwise, so each role keeps its own default.
+    A vertical spreads the result into its config constructors."""
+    model = os.environ.get("LLM_MODEL", "").strip()
+    return {"model": model} if model else {}
+
+
 def host_approval_default() -> bool:
     """Merchant portals require host approval unless ``MERCHANT_REQUIRE_HOST_APPROVAL=0``."""
     return os.environ.get("MERCHANT_REQUIRE_HOST_APPROVAL", "1") != "0"
