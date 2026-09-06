@@ -24,22 +24,22 @@ def test_only_an_explicit_zero_turns_host_approval_off(monkeypatch, value, expec
 
 
 @pytest.mark.parametrize("value", [None, "", "  "])
-def test_no_model_override_without_a_non_blank_llm_model(monkeypatch, value):
+def test_no_model_override_without_a_non_blank_anthropic_model(monkeypatch, value):
     if value is None:
-        monkeypatch.delenv("LLM_MODEL", raising=False)
+        monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
     else:
-        monkeypatch.setenv("LLM_MODEL", value)
+        monkeypatch.setenv("ANTHROPIC_MODEL", value)
     assert model_override() == {}
 
 
-def test_llm_model_names_the_turn_loop_model(monkeypatch):
-    monkeypatch.setenv("LLM_MODEL", " claude-opus-5 ")
+def test_anthropic_model_names_the_turn_loop_model(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_MODEL", " claude-opus-5 ")
     assert model_override() == {"model": "claude-opus-5"}
 
 
 @pytest.mark.parametrize("vertical", ["retail", "travel", "telecom", "entertainment"])
-def test_every_vertical_builds_both_configs_on_llm_model(monkeypatch, vertical):
-    monkeypatch.setenv("LLM_MODEL", "gateway-model")
+def test_every_vertical_builds_both_configs_on_anthropic_model(monkeypatch, vertical):
+    monkeypatch.setenv("ANTHROPIC_MODEL", "gateway-model")
     agent_config = importlib.import_module(f"{vertical}.api.agent_config")
 
     assert agent_config.build_shopping_config().model == "gateway-model"

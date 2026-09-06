@@ -73,10 +73,10 @@ def load_demo_env(example_root: Path) -> None:
 
 
 def model_override() -> dict[str, str]:
-    """The config fields ``LLM_MODEL`` sets: ``model``, the turn-loop model of both roles,
+    """The config fields ``ANTHROPIC_MODEL`` sets: ``model``, the turn-loop model of both roles,
     when the variable is non-blank; nothing otherwise, so each role keeps its own default.
     A vertical spreads the result into its config constructors."""
-    model = os.environ.get("LLM_MODEL", "").strip()
+    model = os.environ.get("ANTHROPIC_MODEL", "").strip()
     return {"model": model} if model else {}
 
 

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """The ACME retail deployment's two agent configs; the only place this example reads
-deployment knobs from the environment (``LLM_MODEL`` through ``model_override``)."""
+deployment knobs from the environment (``ANTHROPIC_MODEL`` through ``model_override``)."""
 
 from __future__ import annotations
 
