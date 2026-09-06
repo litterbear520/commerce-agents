@@ -29,7 +29,12 @@ def env_dirs(tmp_path, monkeypatch):
     repo_root, example_root = tmp_path / "repo", tmp_path / "repo" / "examples" / "retail"
     example_root.mkdir(parents=True)
     monkeypatch.setattr(host_module, "REPO_ROOT", repo_root)
-    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "COMMERCE_DEMO_AUTH"):
+    for name in (
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "ANTHROPIC_BASE_URL",
+        "COMMERCE_DEMO_AUTH",
+    ):
         monkeypatch.delenv(name, raising=False)
     return repo_root, example_root
 
@@ -72,6 +77,42 @@ def test_sdk_auth_clears_key_variables_and_reads_no_file(env_dirs, monkeypatch):
     load_demo_env(example_root)
 
     assert "ANTHROPIC_API_KEY" not in os.environ
+
+
+def test_a_base_url_in_the_env_file_reaches_the_environment(env_dirs):
+    repo_root, example_root = env_dirs
+    (repo_root / ".env").write_text(
+        "ANTHROPIC_API_KEY=root-key\nANTHROPIC_BASE_URL=https://llm-gateway.internal.example\n"
+    )
+
+    load_demo_env(example_root)
+
+    assert os.environ["ANTHROPIC_BASE_URL"] == "https://llm-gateway.internal.example"
+
+
+def test_a_base_url_in_the_environment_wins_over_the_env_file(env_dirs, monkeypatch):
+    repo_root, example_root = env_dirs
+    (repo_root / ".env").write_text("ANTHROPIC_BASE_URL=https://from-the-file.example\n")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://from-the-shell.example")
+
+    load_demo_env(example_root)
+
+    assert os.environ["ANTHROPIC_BASE_URL"] == "https://from-the-shell.example"
+
+
+@pytest.mark.parametrize("auth_mode", [None, "sdk"])
+def test_a_blank_base_url_is_dropped_so_the_client_keeps_its_default(
+    env_dirs, monkeypatch, auth_mode
+):
+    repo_root, example_root = env_dirs
+    (repo_root / ".env").write_text("ANTHROPIC_API_KEY=root-key\nANTHROPIC_BASE_URL=\n")
+    if auth_mode:
+        monkeypatch.setenv("COMMERCE_DEMO_AUTH", auth_mode)
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", " ")
+
+    load_demo_env(example_root)
+
+    assert "ANTHROPIC_BASE_URL" not in os.environ
 
 
 async def test_spawn_background_holds_the_task_until_it_finishes():

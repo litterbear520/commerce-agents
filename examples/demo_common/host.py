@@ -57,16 +57,19 @@ class DemoStorefront(Protocol):
 
 
 def load_demo_env(example_root: Path) -> None:
-    """Load credentials before any agent is constructed. A variable already in the
-    environment wins; the example's own ``.env`` fills in the rest, then the repo-root
-    one; ``COMMERCE_DEMO_AUTH=sdk`` clears key variables instead so the Anthropic SDK's
-    own credential chain is used."""
+    """Load credentials and the API endpoint before any agent is constructed. A variable
+    already in the environment wins; the example's own ``.env`` fills in the rest, then
+    the repo-root one; ``COMMERCE_DEMO_AUTH=sdk`` clears key variables instead so the
+    Anthropic SDK's own credential chain is used. A blank ``ANTHROPIC_BASE_URL`` (the
+    ``.env.example`` placeholder) is dropped so the client keeps its default endpoint."""
     if os.environ.get("COMMERCE_DEMO_AUTH", "").lower() == "sdk":
         os.environ.pop("ANTHROPIC_API_KEY", None)
         os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
     else:
         load_dotenv(example_root / ".env", override=False)
         load_dotenv(REPO_ROOT / ".env", override=False)
+    if not os.environ.get("ANTHROPIC_BASE_URL", "").strip():
+        os.environ.pop("ANTHROPIC_BASE_URL", None)
 
 
 def host_approval_default() -> bool:

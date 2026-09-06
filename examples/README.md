@@ -42,6 +42,7 @@ only the session id, in `X-Session-Id`, and the routes read the principal from i
 | Variable | Effect | Read in | Default |
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` | Chat credentials; the environment wins over `<vertical>/.env`, which wins over the repo-root `.env` | `demo_common/host.py` | unset (client credential chain) |
+| `ANTHROPIC_BASE_URL` | The API endpoint, for a gateway or proxy; same precedence as the credentials, and a blank value is dropped | `demo_common/host.py` | unset (`https://api.anthropic.com`) |
 | `COMMERCE_DEMO_AUTH` | `sdk` skips the `.env` files and clears the key variables so the client's credential chain is used; `run_demo.py --federated` sets it | `demo_common/host.py` | unset |
 | `DEMO_ALLOWED_HOSTS` | Comma-separated Host values the API answers to besides `localhost` and `127.0.0.1` | `demo_common/host.py` | unset |
 | `DEMO_LOG_LEVEL` | `INFO` writes one line per model call; `DEBUG` adds each request and response | `demo_common/host.py` | `INFO` |

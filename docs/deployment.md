@@ -70,8 +70,8 @@ platform's catalog.
 
 `ShoppingAgent` and `MerchantAgent` take an optional `client`. Without one they construct
 `AsyncAnthropic`, which reads `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, and
-`ANTHROPIC_BASE_URL` from the environment; exporting the last two points the example APIs
-at a gateway. With one, every call uses it: the turn loop (`messages.stream`), memory
+`ANTHROPIC_BASE_URL` from the environment; setting the last two, in the environment or in
+the repo-root `.env`, points the example APIs at a gateway. With one, every call uses it: the turn loop (`messages.stream`), memory
 extraction, and the analysis delegate (`messages.create`). Any async client in the
 `anthropic` package fits. The parameter is annotated `AsyncAnthropic`, so a type checker
 needs a `cast` for the platform classes.
