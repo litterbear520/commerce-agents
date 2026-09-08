@@ -557,42 +557,69 @@ td { color: var(--text-2); }
 
 <main class="wrap">
 <!-- ════════════════════════════════════════════
-     Section 1: 一轮对话的完整流程
+     Section 1: 分层架构图
      ════════════════════════════════════════════ -->
 <section class="section">
-<h2>一轮对话里发生了什么</h2>
-<p>以购物场景为例：用户输入 <code>"一顶两人帐篷，250 美元以内"</code>，Messages API 路径下的完整处理流程如下。</p>
+<h2>分层架构</h2>
+<p>整个系统分四层。上层依赖下层，同层之间不互相依赖。每层是独立的 pip 包，一个机制只在一处定义。</p>
 
-<div class="card">
-<div class="flow">
-  <div class="flow-step">
-    <div class="flow-num">1</div>
-    <div class="flow-body"><p><strong>预取上下文</strong> — 并行调用 <code>get_preferences</code>、<code>get_cart</code>、<code>tier_one</code> 记忆事实和 <code>get_account_context</code>。结果放入缓存断点之后的围栏块（fenced block），模型读取但不能作为指令执行。</p></div>
-  </div>
-  <div class="flow-step">
-    <div class="flow-num">2</div>
-    <div class="flow-body"><p><strong>接地检查（Grounding）</strong> — <code>first_forced_tool()</code> 将用户消息与词表匹配：如果是退货/政策问题，强制先调用 <code>search_policies</code>；如果提及未见过的产品 ID，强制 <code>get_product_details</code>。本例不触发任何规则，模型自由选择工具。</p></div>
-  </div>
-  <div class="flow-step">
-    <div class="flow-num">3</div>
-    <div class="flow-body"><p><strong>模型调用 <code>search_products</code></strong> — 参数 <code>query="two-person tent"</code>, <code>filters={max_price: 250}</code>。执行器将 <code>limit</code> 钳制到 <code>max_search_results</code>，调用 <code>StorefrontBackend.search_products</code>，结果经 <code>Fence.fence_payload()</code> 消毒和围栏后返回。匹配的产品 ID 记入会话的 <code>seen_products</code> 来源追踪表（LRU，上限 200）。</p></div>
-  </div>
-  <div class="flow-step">
-    <div class="flow-num">4</div>
-    <div class="flow-body"><p><strong>模型调用 <code>present_products</code></strong> — 参数 <code>product_ids=["T-01", "T-02", "T-03"]</code>。<code>run_presentation()</code> 验证 payload schema，调用 <code>enrich_products()</code> 从 <code>seen_products</code> 解析每个 ID 的完整记录，丢弃无来源的 ID，生成 <code>ui</code> 事件。流式传输时先产生 <code>ui_partial</code> 事件，让前端逐步渲染。</p></div>
-  </div>
-  <div class="flow-step">
-    <div class="flow-num">5</div>
-    <div class="flow-body"><p><strong>模型调用 <code>present_suggestions</code></strong> — 参数 <code>suggestions=["看帐篷详情", "比较前两顶", "加入购物车"]</code>。建议芯片经 <code>sanitize_suggestion_chips()</code> 消毒（上限 4 条），产生 <code>ui</code> 事件。</p></div>
-  </div>
-  <div class="flow-step">
-    <div class="flow-num">6</div>
-    <div class="flow-body"><p><strong>回合结束</strong> — 这一轮包含建议芯片且所有展示调用均成功（<code>close_on_presentation</code>），回合关闭。运行时产生 <code>turn_complete</code> 事件（含 <code>usage</code>、<code>elapsed_ms</code>）。之后 <code>update_memory()</code> 用记忆模型（默认 <code>claude-haiku-4-5</code>）从对话文本提取事实存入记忆。</p></div>
-  </div>
-</div>
+<div class="diagram">
+<svg viewBox="0 0 800 420" width="800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Layer 4: 行业示例 -->
+  <rect x="40" y="12" width="720" height="52" rx="12" class="fill-card" stroke="var(--card-border)" stroke-width="1"/>
+  <text x="400" y="32" text-anchor="middle" font-size="11" font-weight="600" class="text-tertiary" letter-spacing="0.08em">行业示例（EXAMPLES）</text>
+  <text x="130" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Retail</text>
+  <text x="305" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Travel</text>
+  <text x="490" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Telecom</text>
+  <text x="670" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Entertainment</text>
+
+  <!-- Arrow -->
+  <line x1="400" y1="64" x2="400" y2="88" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- Layer 3: 三条运行路径 -->
+  <rect x="40" y="88" width="225" height="56" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
+  <text x="152" y="112" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)">Messages API</text>
+  <text x="152" y="132" text-anchor="middle" font-size="10" class="text-secondary">参考循环 · 完整功能</text>
+
+  <rect x="288" y="88" width="225" height="56" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
+  <text x="400" y="112" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)">Agent SDK</text>
+  <text x="400" y="132" text-anchor="middle" font-size="10" class="text-secondary">SDK 驱动循环 · 预取接地</text>
+
+  <rect x="536" y="88" width="225" height="56" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
+  <text x="648" y="112" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)">Managed Agents</text>
+  <text x="648" y="132" text-anchor="middle" font-size="10" class="text-secondary">平台托管 · MCP Server</text>
+
+  <!-- Arrows -->
+  <line x1="152" y1="144" x2="250" y2="176" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="400" y1="144" x2="400" y2="176" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="648" y1="144" x2="550" y2="176" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- Layer 2: 两个核心 -->
+  <rect x="40" y="176" width="340" height="88" rx="12" class="fill-shopping" stroke="var(--shopping)" stroke-width="1"/>
+  <text x="210" y="200" text-anchor="middle" font-size="12" font-weight="600" class="text-shopping">Shopping Agent Core</text>
+  <text x="210" y="220" text-anchor="middle" font-size="10" class="text-secondary">StorefrontBackend · 购物车门控</text>
+  <text x="210" y="240" text-anchor="middle" font-size="10" class="text-secondary">提示词 · 工具合约 · 五个技能</text>
+  <text x="210" y="256" text-anchor="middle" font-size="10" class="text-tertiary label-mono">shopping_agent</text>
+
+  <rect x="420" y="176" width="340" height="88" rx="12" class="fill-merchant" stroke="var(--merchant)" stroke-width="1"/>
+  <text x="590" y="200" text-anchor="middle" font-size="12" font-weight="600" class="text-merchant">Merchant Agent Core</text>
+  <text x="590" y="220" text-anchor="middle" font-size="10" class="text-secondary">MerchantBackend · 暂存→审批→应用</text>
+  <text x="590" y="240" text-anchor="middle" font-size="10" class="text-secondary">提示词 · 工具合约 · 五个技能</text>
+  <text x="590" y="256" text-anchor="middle" font-size="10" class="text-tertiary label-mono">merchant_agent</text>
+
+  <!-- Arrows -->
+  <line x1="210" y1="264" x2="300" y2="298" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="590" y1="264" x2="500" y2="298" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- Layer 1: 共享层 -->
+  <rect x="120" y="298" width="560" height="68" rx="12" class="fill-common" stroke="var(--common)" stroke-width="1"/>
+  <text x="400" y="322" text-anchor="middle" font-size="12" font-weight="600" class="text-common">commerce_common</text>
+  <text x="400" y="342" text-anchor="middle" font-size="10" class="text-secondary">配置 · 围栏 · 记忆 · 技能 · 接地 · 展示 · 委托 · 执行器 · 流式 · 回合</text>
+  <text x="400" y="358" text-anchor="middle" font-size="10" class="text-tertiary">两个角色共享的全部机制</text>
+</svg>
 </div>
 
-<p class="muted" style="font-size:13px;margin-top:12px;">上述六步发生在一次 HTTP 请求内，通过 SSE（Server-Sent Events）流式推送 <code>text_delta</code>、<code>tool_call</code>、<code>tool_result</code>、<code>ui</code>、<code>turn_complete</code> 等十种事件类型。<code>EagerDispatcher</code> 在流式响应中一个工具块关闭时立即开始执行，与模型生成重叠。</p>
+<p>数据流向：模型选择工具 → 执行器做门控、调用后端、围栏结果 → 展示调用由服务端填充实际数据后变成 UI 事件推送给前端。</p>
 </section>
 
 <!-- ════════════════════════════════════════════
@@ -600,178 +627,38 @@ td { color: var(--text-2); }
      ════════════════════════════════════════════ -->
 <section class="section">
 <h2>两个 Agent</h2>
-<p>项目定义了两个角色：面向顾客的<strong>购物 Agent</strong>和面向运营人员的<strong>商家 Agent</strong>。每个角色有一套提示词、五个技能、一组工具合约和一个后端接口。</p>
+<p>每个角色有一套提示词、五个技能、一组工具合约和一个后端接口（部署方实现的唯一 ABC）。</p>
 
 <div class="grid-2">
-  <!-- 购物 Agent -->
   <div class="card">
     <span class="tag tag-shopping">Shopping Agent</span>
     <h3 class="mt-0" style="margin-top:16px">购物 Agent</h3>
-    <p class="mb-8"><strong>用途：</strong>嵌入商家 App，帮助顾客搜索、比较、规划、下单、查看订单和政策。</p>
-    <p class="mb-8"><strong>默认模型：</strong><code>claude-sonnet-5</code></p>
-    <p class="mb-8"><strong>后端接口：</strong><code>StorefrontBackend</code>（<code>shopping_agent/backend.py</code>）——目录搜索、商品详情、购物车读写、用户偏好、订单、政策、配送、披露信息。购物车操作是唯一的写入；<code>checkout</code> 不下单也不收费，只渲染购物车交给宿主完成。</p>
-    <p class="mb-16"><strong>20+ 工具</strong>，包括目录工具、购物车工具、订单工具、记忆工具和展示工具。</p>
-
-    <div class="mb-8"><strong>五个技能</strong></div>
-    <ul class="skill-list">
-      <li><span class="skill-name">search-discovery</span> 将描述的需求变成候选清单和推荐</li>
-      <li><span class="skill-name">planning-goals</span> 为目标、活动或旅行规划一组协调的采购</li>
-      <li><span class="skill-name">purchase-research</span> 在候选出现之前教顾客如何选择</li>
-      <li><span class="skill-name">memory-personalization</span> 记住、回忆、修正、遗忘顾客偏好</li>
-      <li><span class="skill-name">customer-care</span> 售后服务：订单状态、退换货、店铺政策</li>
-    </ul>
-
-    <div style="margin-top:16px"><strong>安全门控</strong></div>
-    <p class="mb-0" style="font-size:14px">来源追踪门（<code>gates.py</code>）：购物车写入只接受本会话中目录或订单工具返回过的产品 ID。选项门：对有选项的家族产品（如 S/M/L）拒绝直接添加，要求指定变体。单品数量上限 24，购物车行数上限 100，同一会话的购物车写入串行化。</p>
+    <p>嵌入商家 App，帮助顾客搜索、比较、规划、下单、查询订单和政策。</p>
+    <p><strong>后端：</strong><code>StorefrontBackend</code> — 购物车操作是唯一的写入；<code>checkout</code> 不下单不收费，只渲染购物车交给宿主。</p>
+    <p class="mb-0"><strong>技能：</strong>search-discovery、planning-goals、purchase-research、memory-personalization、customer-care</p>
   </div>
-
-  <!-- 商家 Agent -->
   <div class="card">
     <span class="tag tag-merchant">Merchant Agent</span>
     <h3 class="mt-0" style="margin-top:16px">商家 Agent</h3>
-    <p class="mb-8"><strong>用途：</strong>供运营人员使用的后台助手，解释业绩、维护商品、处理库存和订单警报、定价促销、草拟营销活动。所有写入都是暂存提案，需人工批准后才生效。</p>
-    <p class="mb-8"><strong>默认模型：</strong><code>claude-opus-5</code></p>
-    <p class="mb-8"><strong>后端接口：</strong><code>MerchantBackend</code>（<code>merchant_agent/backend.py</code>）——业绩快照、指标查询、活动绩效、商品目录、库存警报、订单异常、定价上下文、五种暂存写入（<code>stage_*</code>）、待审变更列表、应用/丢弃变更、分析查询。只有 <code>apply_change</code> 修改线上状态。</p>
-    <p class="mb-16"><strong>分析委托：</strong>独立的模型调用（<code>delegation.py</code>），接收简报和只读工具，返回 schema 验证的 <code>AnalysisResult</code>。SQL 查询仅允许 SELECT，行数和字符数有上限，有超时和调用次数限制。仅 Messages API 路径完整支持。</p>
-
-    <div class="mb-8"><strong>五个技能</strong></div>
-    <ul class="skill-list">
-      <li><span class="skill-name">performance-insights</span> 指标为什么变动、细分归因、对标分析</li>
-      <li><span class="skill-name">catalog-listings</span> 商品内容创建、质量审计、属性补全</li>
-      <li><span class="skill-name">inventory-operations</span> 库存监控、警报分拣、每日简报</li>
-      <li><span class="skill-name">pricing-promotions</span> 在护栏内调价、促销、折扣建议</li>
-      <li><span class="skill-name">marketing-campaigns</span> 活动草拟、受众选择、预算分配</li>
-    </ul>
-
-    <div style="margin-top:16px"><strong>暂存→批准→应用</strong></div>
-    <p class="mb-0" style="font-size:14px">写入流程：<code>stage_*</code> 方法创建提案 → 护栏检查（<code>changes.py</code>：单次最多 25 项，价格幅度 ≤20%，促销深度 ≤50%，补货 ≤500，活动预算 ≤10000）→ 宿主审批界面标记通过 → <code>apply_change</code> 执行平台写入并再次检查护栏。<code>require_host_approval</code> 默认开启。</p>
+    <p>供运营人员使用的后台助手，解释业绩、维护商品、处理警报、定价促销、草拟营销活动。</p>
+    <p><strong>后端：</strong><code>MerchantBackend</code> — 所有写入都是暂存提案（<code>stage_*</code>），需人工批准后 <code>apply_change</code> 才执行平台写入。</p>
+    <p class="mb-0"><strong>技能：</strong>performance-insights、catalog-listings、inventory-operations、pricing-promotions、marketing-campaigns</p>
   </div>
 </div>
 </section>
 
 <!-- ════════════════════════════════════════════
-     Section 3: 分层架构图
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>分层架构</h2>
-<p>整个系统分为四层。上层依赖下层；同层之间不互相依赖。</p>
-
-<div class="diagram">
-<svg viewBox="0 0 800 480" width="800" xmlns="http://www.w3.org/2000/svg">
-  <!-- Layer 4: 行业示例 -->
-  <rect x="40" y="16" width="720" height="68" rx="12" class="fill-card" stroke="var(--card-border)" stroke-width="1"/>
-  <text x="400" y="38" text-anchor="middle" font-size="11" font-weight="600" class="text-tertiary" letter-spacing="0.08em">行业示例（EXAMPLES）</text>
-  <text x="130" y="62" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Retail</text>
-  <text x="305" y="62" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Travel</text>
-  <text x="490" y="62" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Telecom</text>
-  <text x="670" y="62" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Entertainment</text>
-  <text x="130" y="77" text-anchor="middle" font-size="10" class="text-tertiary">:8000 :3000 :3100</text>
-  <text x="305" y="77" text-anchor="middle" font-size="10" class="text-tertiary">:8001 :3001 :3101</text>
-  <text x="490" y="77" text-anchor="middle" font-size="10" class="text-tertiary">:8002 :3002 :3102</text>
-  <text x="670" y="77" text-anchor="middle" font-size="10" class="text-tertiary">:8003 :3003 :3103</text>
-
-  <!-- Arrows from examples to runtimes -->
-  <line x1="400" y1="84" x2="400" y2="110" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-
-  <!-- Layer 3: 三条运行路径 -->
-  <rect x="40" y="110" width="225" height="72" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
-  <text x="152" y="136" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)" letter-spacing="0.05em">Messages API</text>
-  <text x="152" y="155" text-anchor="middle" font-size="10" class="text-secondary">参考循环 · 完整功能</text>
-  <text x="152" y="170" text-anchor="middle" font-size="10" class="text-tertiary label-mono">ShoppingAgent / MerchantAgent</text>
-
-  <rect x="288" y="110" width="225" height="72" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
-  <text x="400" y="136" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)" letter-spacing="0.05em">Agent SDK</text>
-  <text x="400" y="155" text-anchor="middle" font-size="10" class="text-secondary">SDK 驱动循环 · 预取接地</text>
-  <text x="400" y="170" text-anchor="middle" font-size="10" class="text-tertiary">ClaudeAgentOptions + Toolset</text>
-
-  <rect x="536" y="110" width="225" height="72" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
-  <text x="648" y="136" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)" letter-spacing="0.05em">Managed Agents</text>
-  <text x="648" y="155" text-anchor="middle" font-size="10" class="text-secondary">平台托管 · MCP Server</text>
-  <text x="648" y="170" text-anchor="middle" font-size="10" class="text-tertiary">agent.yaml + MCP server</text>
-
-  <!-- Arrows from runtimes to cores -->
-  <line x1="152" y1="182" x2="250" y2="220" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-  <line x1="400" y1="182" x2="400" y2="220" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-  <line x1="648" y1="182" x2="550" y2="220" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-
-  <!-- Layer 2: 两个核心 -->
-  <rect x="40" y="220" width="340" height="120" rx="12" class="fill-shopping" stroke="var(--shopping)" stroke-width="1"/>
-  <text x="210" y="244" text-anchor="middle" font-size="12" font-weight="600" class="text-shopping">Shopping Agent Core</text>
-  <text x="210" y="264" text-anchor="middle" font-size="10" class="text-secondary">shopping_agent (pip: shopping-agent-core)</text>
-  <text x="70" y="288" font-size="10" class="text-secondary">StorefrontBackend</text>
-  <text x="70" y="304" font-size="10" class="text-secondary">购物车门控 (gates.py)</text>
-  <text x="70" y="320" font-size="10" class="text-secondary">展示组件 (enrichment.py)</text>
-  <text x="230" y="288" font-size="10" class="text-secondary">提示词 (prompt.py)</text>
-  <text x="230" y="304" font-size="10" class="text-secondary">工具注册 (tools/registry.py)</text>
-  <text x="230" y="320" font-size="10" class="text-secondary">序列化 (serialization.py)</text>
-
-  <rect x="420" y="220" width="340" height="120" rx="12" class="fill-merchant" stroke="var(--merchant)" stroke-width="1"/>
-  <text x="590" y="244" text-anchor="middle" font-size="12" font-weight="600" class="text-merchant">Merchant Agent Core</text>
-  <text x="590" y="264" text-anchor="middle" font-size="10" class="text-secondary">merchant_agent (pip: merchant-agent-core)</text>
-  <text x="450" y="288" font-size="10" class="text-secondary">MerchantBackend</text>
-  <text x="450" y="304" font-size="10" class="text-secondary">变更账本 (changes.py)</text>
-  <text x="450" y="320" font-size="10" class="text-secondary">护栏 + 审批门控</text>
-  <text x="610" y="288" font-size="10" class="text-secondary">分析委托 (analysis.py)</text>
-  <text x="610" y="304" font-size="10" class="text-secondary">提示词 (prompt.py)</text>
-  <text x="610" y="320" font-size="10" class="text-secondary">工具注册 (tools/registry.py)</text>
-
-  <!-- Arrows from cores to common -->
-  <line x1="210" y1="340" x2="300" y2="370" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-  <line x1="590" y1="340" x2="500" y2="370" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-
-  <!-- Layer 1: 共享层 -->
-  <rect x="120" y="370" width="560" height="90" rx="12" class="fill-common" stroke="var(--common)" stroke-width="1"/>
-  <text x="400" y="394" text-anchor="middle" font-size="12" font-weight="600" class="text-common">commerce_common</text>
-  <text x="400" y="414" text-anchor="middle" font-size="10" class="text-secondary">两个角色共享的全部机制 · pip: commerce-common</text>
-  <text x="160" y="438" font-size="10" class="text-secondary">配置 · 围栏 · 记忆 · 技能</text>
-  <text x="340" y="438" font-size="10" class="text-secondary">接地 · 展示 · 委托</text>
-  <text x="520" y="438" font-size="10" class="text-secondary">执行器 · 流式 · 回合</text>
-  <text x="160" y="452" font-size="10" class="text-tertiary">agent_sdk · mcp_server · manifest · testing</text>
-</svg>
-</div>
-
-<p>每一层的代码都是独立的 pip 包。共享层定义一次、两个核心各自扩展、三条运行路径各自集成、行业示例各自实现后端和 UI。一个机制只在一处定义。</p>
-</section>
-
-<!-- ════════════════════════════════════════════
-     Section 4: 共享基础设施
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>共享基础设施：<code>commerce_common</code></h2>
-<p>两个角色共享的全部机制。每个模块处理一个关注点，在 <code>commerce-common/commerce_common/</code> 下。</p>
-
-<div class="mod-grid">
-  <div class="mod-item"><span class="mod-name">config</span><span class="mod-desc"><code>BaseAgentConfig</code>，模型、预算、开关的默认值</span></div>
-  <div class="mod-item"><span class="mod-name">types</span><span class="mod-desc"><code>MemoryFact</code>、<code>MemoryCategory</code>、<code>ClockContext</code>、<code>PROVENANCE_CAP</code>(200)</span></div>
-  <div class="mod-item"><span class="mod-name">fencing</span><span class="mod-desc"><code>Fence</code>：消毒第三方文本，移除不可见字符和伪造标记，固定标签围栏</span></div>
-  <div class="mod-item"><span class="mod-name">memory</span><span class="mod-desc"><code>MemoryStore</code>、写入过滤器（阻止身份标识）、提取、<code>MemoryRuntime</code></span></div>
-  <div class="mod-item"><span class="mod-name">skills</span><span class="mod-desc"><code>SkillRegistry</code>：加载 <code>SKILL.md</code> 目录，渲染索引，按需返回</span></div>
-  <div class="mod-item"><span class="mod-name">prompt_assembly</span><span class="mod-desc">缓存断点放置：静态系统块 + 每请求上下文块</span></div>
-  <div class="mod-item"><span class="mod-name">grounding</span><span class="mod-desc"><code>GroundingRule</code>：词表匹配用户消息，强制回合以指定工具开始</span></div>
-  <div class="mod-item"><span class="mod-name">presentation</span><span class="mod-desc"><code>PresentationComponent</code>、<code>PresentationExtension</code>、验证和服务端填充</span></div>
-  <div class="mod-item"><span class="mod-name">delegation</span><span class="mod-desc"><code>DelegateExtension</code>：工具背后的独立模型调用（分析委托）</span></div>
-  <div class="mod-item"><span class="mod-name">execution</span><span class="mod-desc"><code>BaseToolExecutor</code>：分发、失败阶梯、状态行拆分</span></div>
-  <div class="mod-item"><span class="mod-name">streaming</span><span class="mod-desc"><code>AgentEvent</code>（10 种事件类型）、<code>ToolOutcome</code>、<code>to_sse()</code></span></div>
-  <div class="mod-item"><span class="mod-name">turn</span><span class="mod-desc"><code>EagerDispatcher</code>、<code>StreamedRound</code>、<code>compact_history()</code>、日志</span></div>
-  <div class="mod-item"><span class="mod-name">agent_sdk</span><span class="mod-desc"><code>BaseToolset</code>、展示关闭钩子、接地预取、回合收集</span></div>
-  <div class="mod-item"><span class="mod-name">mcp_server</span><span class="mod-desc">每连接执行器、本地绑定强制、工具注册器</span></div>
-  <div class="mod-item"><span class="mod-name">manifest</span><span class="mod-desc">解析 Managed Agent 的 <code>agent.yaml</code>，内联系统提示词</span></div>
-  <div class="mod-item"><span class="mod-name">testing</span><span class="mod-desc">脚本化的假模型客户端，用于确定性测试</span></div>
-</div>
-</section>
-
-<!-- ════════════════════════════════════════════
-     Section 5: 三条运行路径
+     Section 3: 三条运行路径
      ════════════════════════════════════════════ -->
 <section class="section">
 <h2>三条运行路径</h2>
-<p>同一个 Agent（相同的提示词、技能和工具合约）在三种不同的运行架构上运行。区别在于<strong>谁驱动循环</strong>和<strong>哪些运行时功能可用</strong>。</p>
+<p>同一个 Agent 定义（提示词、技能、工具合约）在三种运行架构上运行。安全规则在工具调用内执行，三条路径一致。</p>
 
 <div class="table-wrap">
 <table>
   <thead>
     <tr>
-      <th>维度</th>
+      <th></th>
       <th>Messages API</th>
       <th>Agent SDK</th>
       <th>Managed Agents</th>
@@ -780,300 +667,92 @@ td { color: var(--text-2); }
   <tbody>
     <tr>
       <td><strong>谁驱动循环</strong></td>
-      <td>宿主应用（<code>orchestrator.py</code>）</td>
-      <td>SDK（<code>ClaudeAgentOptions</code>）</td>
+      <td>宿主应用</td>
+      <td>SDK</td>
       <td>平台</td>
     </tr>
     <tr>
-      <td><strong>入口类</strong></td>
+      <td><strong>入口</strong></td>
       <td><code>ShoppingAgent</code> / <code>MerchantAgent</code></td>
-      <td><code>make_options()</code> + <code>Toolset</code></td>
+      <td><code>ClaudeAgentOptions</code> + Toolset</td>
       <td><code>agent.yaml</code> + MCP server</td>
     </tr>
     <tr>
-      <td><strong>接地规则</strong></td>
-      <td>完整（全部规则，通过 <code>tool_choice</code> 强制）</td>
-      <td>预取形式（有 <code>prefetch_intro</code> 的规则）</td>
-      <td>无</td>
-    </tr>
-    <tr>
-      <td><strong>记忆提取</strong></td>
-      <td>回合后自动（<code>update_memory()</code>）</td>
-      <td>宿主调用运行时</td>
-      <td>仅通过 <code>save_memory</code> 工具</td>
-    </tr>
-    <tr>
-      <td><strong>急切工具分发</strong></td>
-      <td>支持（<code>EagerDispatcher</code>，重叠工具执行与生成）</td>
-      <td>不支持</td>
-      <td>不支持</td>
-    </tr>
-    <tr>
-      <td><strong>历史压缩</strong></td>
-      <td>支持（超过 <code>compact_history_above_tokens</code> 时清除旧结果）</td>
-      <td>SDK 管理</td>
-      <td>平台管理</td>
-    </tr>
-    <tr>
-      <td><strong>流式部分 UI</strong></td>
-      <td>支持（<code>ui_partial</code> 事件）</td>
-      <td>不支持</td>
-      <td>不支持</td>
-    </tr>
-    <tr>
-      <td><strong>分析委托</strong></td>
-      <td>完整（独立调用，SQL 查询，预算限制）</td>
-      <td>子 Agent（只读工具，无 SQL，无预算）</td>
-      <td>不支持</td>
-    </tr>
-    <tr>
-      <td><strong>技能加载</strong></td>
-      <td><code>load_skill</code> 工具</td>
-      <td>SDK 的 <code>Skill</code> 工具（适配器）</td>
-      <td>Skills API（平台上传）</td>
-    </tr>
-    <tr>
-      <td><strong>状态行</strong></td>
-      <td>支持（工具调用时的进度提示）</td>
-      <td>不支持</td>
-      <td>不支持</td>
-    </tr>
-    <tr>
-      <td><strong>商家审批</strong></td>
-      <td>门户的审批路由</td>
-      <td>控制台 <code>y/N</code></td>
-      <td>平台的 <code>always_ask</code></td>
+      <td><strong>特点</strong></td>
+      <td>参考实现，功能最完整：接地规则、记忆提取、急切工具分发、流式部分 UI、分析委托</td>
+      <td>SDK 管理循环；接地以预取形式支持；宿主调用记忆提取</td>
+      <td>平台托管；无接地规则；记忆仅通过工具写入</td>
     </tr>
   </tbody>
 </table>
 </div>
-
-<p class="muted" style="font-size:13px">所有路径共享同一个执行器（<code>commerce_common/execution.py</code> + 各角色的 <code>executor.py</code>），因此工具调用内的安全规则（围栏、来源追踪、数量上限、护栏）在三条路径上一致。</p>
 </section>
 
 <!-- ════════════════════════════════════════════
-     Section 6: 安全机制
+     Section 4: 设计原则
      ════════════════════════════════════════════ -->
 <section class="section">
-<h2>安全机制</h2>
-<p>安全规则分三层：<strong>代码强制</strong>（在工具调用内执行，三条路径一致）、<strong>提示词要求</strong>（模型遵循指令）、<strong>部署方负责</strong>（认证、凭证、业务规则等）。以下列出代码强制的核心规则。</p>
-
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr>
-      <th>规则</th>
-      <th>实现位置</th>
-      <th>作用</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>围栏（Fencing）</strong></td>
-      <td><code>commerce_common/fencing.py</code></td>
-      <td>第三方文本消毒（移除不可见字符、伪造标记、围栏标签副本），固定标签围栏包裹，字符数上限 <code>max_fenced_chars</code>（默认 12,000）</td>
-    </tr>
-    <tr>
-      <td><strong>来源追踪</strong></td>
-      <td><code>shopping_agent/gates.py</code>、<code>merchant_agent/gates.py</code></td>
-      <td>购物车和暂存写入只接受本会话中工具返回过的 ID；内容编辑还需要先 <code>get_listing</code>；应用/丢弃只接受返回过的 change ID</td>
-    </tr>
-    <tr>
-      <td><strong>数量和价格上限</strong></td>
-      <td><code>shopping_agent/config.py</code>、<code>merchant_agent/changes.py</code></td>
-      <td>购物车：单品 24、行数 100。商家护栏：单次 25 项、价格 ±20%、促销 ≤50%、补货 ≤500、预算 ≤10,000</td>
-    </tr>
-    <tr>
-      <td><strong>无支付</strong></td>
-      <td><code>StorefrontBackend</code>（无下单方法）</td>
-      <td><code>checkout</code> 渲染购物车交给宿主；托管结账 URL 由 <code>checkout_handoff</code> 在模型调用之后注入，模型不可见</td>
-    </tr>
-    <tr>
-      <td><strong>宿主审批</strong></td>
-      <td><code>merchant_agent/gates.py</code></td>
-      <td><code>apply_change</code> 仅对宿主标记为 approved 的变更放行。默认开启。</td>
-    </tr>
-    <tr>
-      <td><strong>UI 验证</strong></td>
-      <td><code>commerce_common/presentation.py</code></td>
-      <td>展示调用经 schema 验证，然后服务端从会话记录填充每个产品/指标/变更的实际数据；无来源的 ID 被丢弃</td>
-    </tr>
-    <tr>
-      <td><strong>记忆写入过滤</strong></td>
-      <td><code>commerce_common/memory.py</code></td>
-      <td>键 ≤64 字符、值 ≤200 字符、三种类别之一。默认阻止标识符形状的值（9+ 位数字、IBAN、邮箱）</td>
-    </tr>
-    <tr>
-      <td><strong>分析 SQL 检查</strong></td>
-      <td><code>merchant_agent/analysis.py</code></td>
-      <td>仅允许 SELECT，无注释，禁止关键字正则。结果行数和字符数有上限，有超时</td>
-    </tr>
-    <tr>
-      <td><strong>身份隔离</strong></td>
-      <td><code>examples/demo_common/sessions.py</code></td>
-      <td>会话绑定主体到不可猜测的 session ID；后续请求只携带该 ID；模型不接触凭证</td>
-    </tr>
-    <tr>
-      <td><strong>MCP 绑定</strong></td>
-      <td><code>commerce_common/mcp_server.py</code></td>
-      <td>MCP server 拒绝非回环绑定，除非声明了认证网关</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-<p><strong>提示词层</strong>另外要求：围栏文本是待报告的材料而非指令；术语和数字只从工具结果引用；写入在调用成功后确认；专业/医疗/安全问题给出产品和转介。当模型违反提示词规则时，错误仅限于其文本——背后的写入、数字和披露信息仍通过了代码检查。</p>
-<p><strong>部署方</strong>负责认证和授权、凭证管理、速率限制、业务规则、支付、记忆作为个人数据的处理（保留期、查看和删除）、日志卫生、审批界面和护栏值的配置。详见 <code>docs/safety.md</code>。</p>
+<h2>设计原则</h2>
+<ul style="font-size:15px;line-height:1.8;padding-left:20px">
+  <li><strong>一个模型拥有对话。</strong>规则按适用频率放入工具描述、提示词或技能。</li>
+  <li><strong>静态提示词和工具列表每轮相同字节。</strong>每请求数据放在缓存断点之后的围栏块中。</li>
+  <li><strong>UI 是展示工具调用。</strong>模型选择组件和 ID，服务端验证并填充实际数据，流式推送为 <code>ui</code> 事件。</li>
+  <li><strong>第三方内容是围栏数据。</strong>写入受来源追踪门和数量上限约束；<code>checkout</code> 不收费；商家写入需人工批准。</li>
+  <li><strong>核心与行业无关。</strong>行业通过 <code>PresentationExtension</code> 添加 UI，其余交给后端实现。</li>
+  <li><strong>每个机制只定义一次。</strong>在 <code>commerce_common</code> 或角色核心中定义，三条路径共享。</li>
+</ul>
+<p class="muted" style="font-size:13px">详细安全规则表见 <code>docs/safety.md</code>，后端映射指南见 <code>docs/backends.md</code>。</p>
 </section>
 
 <!-- ════════════════════════════════════════════
-     Section 7: 四个行业示例
+     Section 5: 行业示例与入口
      ════════════════════════════════════════════ -->
 <section class="section">
 <h2>四个行业示例</h2>
-<p>每个示例在 <code>examples/&lt;vertical&gt;/</code> 下，包含 <code>api/</code>（FastAPI + 模拟后端）、<code>data/</code>（JSON 数据）、<code>storefront-web/</code>（Next.js 店面）和 <code>merchant-web/</code>（Next.js 门户）。共享代码在 <code>examples/demo_common/</code>（宿主、会话、路由）和 <code>examples/web-shared/</code>（API 客户端、事件类型、UI 组件）。</p>
-
-<div class="grid-4">
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">Retail（零售）</h3>
-    <p style="font-size:13px;margin-bottom:8px" class="muted">ACME · :8000 :3000 :3100</p>
-    <p style="font-size:14px"><strong>店面：</strong>搜索、对比、规划、购物车、结账、记忆。产品有尺码和颜色选项（含缺货变体）。</p>
-    <p style="font-size:14px" class="mb-0"><strong>门户：</strong>SQL 分析委托、每日简报、暂存补货和商品修复。</p>
-  </div>
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">Travel（旅行）</h3>
-    <p style="font-size:13px;margin-bottom:8px" class="muted">ACME Travel · :8001 :3001 :3101</p>
-    <p style="font-size:14px"><strong>店面：</strong>日期绑定库存，<code>present_itinerary</code> 扩展组件。</p>
-    <p style="font-size:14px" class="mb-0"><strong>门户：</strong>入住日历，日期窗口价格调整。</p>
-  </div>
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">Telecom（电信）</h3>
-    <p style="font-size:13px;margin-bottom:8px" class="muted">ACME Mobile · :8002 :3002 :3102</p>
-    <p style="font-size:14px"><strong>店面：</strong>账户上下文，套餐矩阵扩展，服务端编写的费用披露。</p>
-    <p style="font-size:14px" class="mb-0"><strong>门户：</strong>套餐组合，标明受影响线路的价格变更，受保护的受监管费用。</p>
-  </div>
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">Entertainment（娱乐）</h3>
-    <p style="font-size:13px;margin-bottom:8px" class="muted">ACME Tickets · :8003 :3003 :3103</p>
-    <p style="font-size:14px"><strong>店面：</strong>限时保留、候补名单、转让、场馆地图、全含式费用披露。票务引擎强制保留限额、过期和所有权。</p>
-    <p style="font-size:14px" class="mb-0"><strong>门户：</strong>活动节奏，释放保留以增加真实容量，保留费用的价格调整。</p>
-  </div>
-</div>
-
-<p style="margin-top:20px">行业特有的 UI 通过 <code>PresentationExtension</code> 添加（四个示例共提供七个扩展组件）。核心代码不因行业而变；行业只实现后端和 UI。</p>
-</section>
-
-<!-- ════════════════════════════════════════════
-     Section 8: 七个 pip 包
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>七个 pip 包</h2>
-<p><code>requirements.txt</code> 从目录安装这七个包及其固定依赖。</p>
+<p>每个示例在 <code>examples/</code> 下，包含 FastAPI 后端 + Next.js 店面和门户。共享代码在 <code>demo_common/</code> 和 <code>web-shared/</code>。</p>
 
 <div class="table-wrap">
 <table>
   <thead>
-    <tr>
-      <th>目录</th>
-      <th>pip 包名</th>
-      <th><code>import</code> 名</th>
-      <th>内容</th>
-    </tr>
+    <tr><th>行业</th><th>品牌</th><th>特色</th></tr>
   </thead>
   <tbody>
-    <tr>
-      <td><code>commerce-common/</code></td>
-      <td>commerce-common</td>
-      <td><code>commerce_common</code></td>
-      <td>两个角色共享的机制：配置、围栏、记忆、技能、接地、展示、执行器、流式、回合</td>
-    </tr>
-    <tr>
-      <td><code>shopping-agent/core/</code></td>
-      <td>shopping-agent-core</td>
-      <td><code>shopping_agent</code></td>
-      <td>购物类型、<code>StorefrontBackend</code>、提示词、工具合约、门控、执行器</td>
-    </tr>
-    <tr>
-      <td><code>shopping-agent/runtime-messages-api/</code></td>
-      <td>shopping-agent-runtime</td>
-      <td><code>shopping_agent_runtime</code></td>
-      <td><code>ShoppingAgent</code>：Messages API 上的回合循环</td>
-    </tr>
-    <tr>
-      <td><code>shopping-agent/runtime-agent-sdk/</code></td>
-      <td>shopping-agent-sdk</td>
-      <td><code>shopping_agent_sdk</code></td>
-      <td>Agent SDK 上的购物 Agent，带控制台</td>
-    </tr>
-    <tr>
-      <td><code>merchant-agent/core/</code></td>
-      <td>merchant-agent-core</td>
-      <td><code>merchant_agent</code></td>
-      <td>商家类型、<code>MerchantBackend</code>、提示词、工具合约、变更护栏、门控、执行器</td>
-    </tr>
-    <tr>
-      <td><code>merchant-agent/runtime-messages-api/</code></td>
-      <td>merchant-agent-runtime</td>
-      <td><code>merchant_agent_runtime</code></td>
-      <td><code>MerchantAgent</code> 和分析委托：Messages API 回合循环</td>
-    </tr>
-    <tr>
-      <td><code>merchant-agent/runtime-agent-sdk/</code></td>
-      <td>merchant-agent-sdk</td>
-      <td><code>merchant_agent_sdk</code></td>
-      <td>Agent SDK 上的商家 Agent，带审批控制台</td>
-    </tr>
+    <tr><td><strong>Retail</strong></td><td>ACME</td><td>产品选项（尺码/颜色）、SQL 分析委托、每日简报</td></tr>
+    <tr><td><strong>Travel</strong></td><td>ACME Travel</td><td>日期绑定库存、行程扩展组件、入住日历</td></tr>
+    <tr><td><strong>Telecom</strong></td><td>ACME Mobile</td><td>账户上下文、套餐矩阵、服务端费用披露、受保护的受监管费用</td></tr>
+    <tr><td><strong>Entertainment</strong></td><td>ACME Tickets</td><td>限时保留、候补名单、场馆地图、固定顺序流程</td></tr>
   </tbody>
 </table>
 </div>
-</section>
 
-<!-- ════════════════════════════════════════════
-     Section 9: 从哪读起
-     ════════════════════════════════════════════ -->
-<section class="section">
+<hr>
+
 <h2>从哪读起</h2>
-<p>根据目标选择入口。</p>
-
 <div class="grid-3">
   <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">想理解设计</h3>
+    <h3 class="mt-0" style="font-size:1rem">理解设计</h3>
     <ul class="skill-list">
-      <li><span class="skill-name">README.md</span> 项目概览和运行方式</li>
-      <li><span class="skill-name">docs/safety.md</span> 全部安全规则及其实现模块</li>
-      <li><span class="skill-name">docs/backends.md</span> 后端接口映射指南</li>
-      <li><span class="skill-name">CLAUDE.md</span> 设计规则和约定</li>
+      <li><span class="skill-name">README.md</span> 项目概览</li>
+      <li><span class="skill-name">docs/safety.md</span> 安全规则</li>
+      <li><span class="skill-name">docs/backends.md</span> 后端映射</li>
     </ul>
   </div>
   <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">想运行演示</h3>
+    <h3 class="mt-0" style="font-size:1rem">运行演示</h3>
     <ul class="skill-list">
-      <li><span class="skill-name">scripts/run_demo.py</span> 启动一个行业的 API + Web</li>
-      <li><span class="skill-name">scripts/smoke_chat.py</span> 自动运行一轮对话</li>
-      <li><span class="skill-name">examples/retail/</span> 最完整的行业示例</li>
+      <li><span class="skill-name">scripts/run_demo.py</span> 启动行业演示</li>
+      <li><span class="skill-name">examples/retail/</span> 最完整的示例</li>
     </ul>
   </div>
   <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">想接入自己的系统</h3>
+    <h3 class="mt-0" style="font-size:1rem">接入自己的系统</h3>
     <ul class="skill-list">
-      <li><span class="skill-name">StorefrontBackend</span> 购物后端的 ABC 接口</li>
-      <li><span class="skill-name">MerchantBackend</span> 商家后端的 ABC 接口</li>
-      <li><span class="skill-name">docs/deployment.md</span> GCP / AWS / Foundry 部署</li>
-      <li><span class="skill-name">plugins/</span> Claude Code 插件脚手架</li>
+      <li><span class="skill-name">StorefrontBackend</span> 购物后端 ABC</li>
+      <li><span class="skill-name">MerchantBackend</span> 商家后端 ABC</li>
+      <li><span class="skill-name">plugins/</span> 插件脚手架</li>
     </ul>
   </div>
 </div>
-
-<h3>快速启动</h3>
-<pre><code>git clone https://github.com/anthropics/commerce-agents.git && cd commerce-agents
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt       # 七个包及其固定依赖
-cp .env.example .env                  # 添加 ANTHROPIC_API_KEY
-(cd examples && npm ci)               # 八个 Web 应用共享一个 npm workspace
-python scripts/run_demo.py retail     # API :8000 + 店面 :3000</code></pre>
-<p style="font-size:14px"><code>--merchant</code> 启动门户而非店面，<code>--all</code> 同时启动两者。验证命令：</p>
-<pre><code>ruff check . && ruff format --check . && pytest && python scripts/check.py
-python scripts/verify_all.py          # 上面的命令 + 部署模拟和 Web 构建</code></pre>
 </section>
 </main>
 
