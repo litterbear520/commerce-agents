@@ -33,13 +33,17 @@ import threading
 import time
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(line_buffering=True)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
-NEXT = EXAMPLES_DIR / "node_modules" / ".bin" / "next"
+WINDOWS = sys.platform == "win32"
+# npm's launchers are .cmd files on Windows; CreateProcess cannot run the extensionless one.
+NPM = "npm.cmd" if WINDOWS else "npm"
+NEXT = EXAMPLES_DIR / "node_modules" / ".bin" / ("next.cmd" if WINDOWS else "next")
 
 VERTICALS: dict[str, dict[str, object]] = {
     "retail": {
@@ -151,20 +155,43 @@ def ensure_web_deps(install: bool) -> None:
     if not install:
         sys.exit(f"{EXAMPLES_DIR}/node_modules missing — run `npm ci` in {EXAMPLES_DIR} first.")
     print(f"{YELLOW}Installing the web workspace (first run)…{RESET}")
-    result = subprocess.run(["npm", "ci", "--no-audit", "--no-fund"], cwd=EXAMPLES_DIR)
+    result = subprocess.run([NPM, "ci", "--no-audit", "--no-fund"], cwd=EXAMPLES_DIR)
     if result.returncode:
         sys.exit(f"npm ci failed (see above); fix the registry, or run it in {EXAMPLES_DIR}.")
 
 
 def spawn(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.Popen:
+    # Each child owns a process group, so shutdown takes its tree.
+    grouping: dict[str, Any] = (
+        {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+        if WINDOWS
+        else {"start_new_session": True}
+    )
     return subprocess.Popen(
         command,
         cwd=cwd,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        start_new_session=True,  # each child owns a process group, so shutdown takes its tree
+        **grouping,
     )
+
+
+def stop_tree(process: subprocess.Popen, force: bool) -> None:
+    """Signal the child's whole process group (POSIX) or process tree (Windows)."""
+    if process.poll() is not None:
+        return
+    if WINDOWS:
+        # Next.js dev spawns its own node children; taskkill /T takes them along.
+        subprocess.run(
+            ["taskkill", "/T", "/PID", str(process.pid)] + (["/F"] if force else []),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL if force else signal.SIGTERM)
 
 
 def start_api(vertical: str, port: int, federated: bool) -> subprocess.Popen:
@@ -342,16 +369,13 @@ def main() -> int:
         return 0
     finally:
         for _, process in processes:
-            if process.poll() is None:
-                with contextlib.suppress(ProcessLookupError, PermissionError):
-                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            stop_tree(process, force=False)
         deadline = time.monotonic() + 10
         for _, process in processes:
             try:
                 process.wait(timeout=max(0.1, deadline - time.monotonic()))
             except subprocess.TimeoutExpired:
-                with contextlib.suppress(ProcessLookupError, PermissionError):
-                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                stop_tree(process, force=True)
 
 
 if __name__ == "__main__":
