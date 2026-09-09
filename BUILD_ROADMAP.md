@@ -7,10 +7,11 @@
 > 你在对应文件里能找到完整实现。「验证」告诉你怎么确认这步做对了。「设计决策」解释
 > 那个不明显的选择——为什么这样而不是那样。
 >
-> **关于文件位置**：Stage B–C 中标注为 `commerce-common/commerce_common/` 的模块（如
-> `fencing.py`、`memory.py`、`grounding.py` 等），构建时还住在 `shopping_agent/` 包里——
-> 因为此时只有一个角色，你不知道哪些是通用的。Step 17 开始写商户 agent 时才搬家到
-> `commerce_common`。路径标注的是最终位置，方便你对照仓库代码。
+> **关于文件位置**：所有路径标注的都是仓库最终位置，方便你对照代码。Stage A 的代码
+> 还在一个 `agent.py` 里；Stage B 拆出 `shopping_agent/` 包结构；Stage B–C 中标注为
+> `commerce-common/commerce_common/` 的模块（如 `fencing.py`、`memory.py`、`grounding.py` 等），
+> 构建时还住在 `shopping_agent/` 包里——因为此时只有一个角色，你不知道哪些是通用的。
+> Step 18 开始写商户 agent 时才搬家到 `commerce_common`。
 
 ---
 
@@ -118,7 +119,7 @@
 **设计决策**：为什么是「held」而不是「error」？因为这不是模型犯了错——它是在合理推测一个 ID。
 `held` 告诉它「你的操作被暂时搁置，这样做可以恢复」，比 error 的语气更准确，模型的恢复行为也更好。
 参考 `commerce-common/commerce_common/streaming.py` 的 `ToolOutcome` 类。
-这就是规则 5 — 写操作有溯源门控。
+这就是规则 4 — 写操作有溯源门控。
 
 ---
 
@@ -176,14 +177,14 @@
 
 **做什么**：
 - [ ] 创建 `shopping-agent/core/` 包结构
-- [ ] 提取 `types.py`：`Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`、`CheckoutHandoff`、`Order`、`Policy`、`UserPreferences`、`ShoppingSessionContext`、`ShoppingSessionState`（包含 `seen_products`）
-- [ ] 提取 `backend.py`：`StorefrontBackend` 抽象类 — 11 个抽象方法定义了你的后端需要实现什么（搜索、详情、购物车 CRUD、偏好、订单、政策）
+- [ ] 提取 `types.py`：`Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`、`ShoppingSessionContext`、`ShoppingSessionState`（包含 `seen_products`）— 只包含到目前为止用到的类型，`Order`、`Policy` 等到 Step 14 再加
+- [ ] 提取 `backend.py`：`StorefrontBackend` 抽象类 — 目前 6 个抽象方法（search、details、cart CRUD），Step 14 扩展到 11 个
 - [ ] 提取 `config.py`：`ShoppingAgentConfig` — 所有可调参数（模型名、max_tokens、迭代上限、购物车上限、系统开关）放在一个 Pydantic 模型里，`extra="forbid"` 让拼写错误在构造时就报错
 - [ ] 提取 `fencing.py`：定义 `STOREFRONT_FENCE`
 
 **验证**：代码能 `import shopping_agent` 且之前的对话流程不变。
 
-**设计决策**：`StorefrontBackend` 为什么是抽象类而不是协议（Protocol）？因为它有 11 个方法，
+**设计决策**：`StorefrontBackend` 为什么是抽象类而不是协议（Protocol）？因为它最终有 11 个方法，
 实现者需要明确知道自己少了哪个——抽象类在实例化时就报错，Protocol 只在调用时才发现缺方法。
 参考 `shopping-agent/core/shopping_agent/backend.py` — 注意 `checkout_handoff` 和
 `get_disclosure` 是可选方法（有默认实现），因为不是所有店都需要。
@@ -361,7 +362,9 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 `customer-care` 技能已经写了（Step 13），它引用的工具还不存在。
 
 **做什么**：
-- [ ] 在 `backend.py` 确认 `get_orders`、`get_order`、`search_policies`、`get_preferences`、`get_fulfillment_options` 已声明（Step 07 定义了 ABC，这里确保 `FakeBackend` 实现了它们）
+- [ ] 在 `types.py` 添加 `Order`、`OrderItem`、`OrderStatus`、`Policy`、`UserPreferences`、`FulfillmentOption`、`CheckoutHandoff`
+- [ ] 在 `backend.py` 添加 5 个新抽象方法：`get_orders`、`get_order`、`search_policies`、`get_preferences`、`get_fulfillment_options`（ABC 从 6 方法扩展到 11 方法）
+- [ ] 在 `FakeBackend` 里实现这些新方法
 - [ ] 在 `tools/registry.py` 注册这些工具：`get_orders`、`get_order_status`、`search_policies`、`get_preferences`、`get_fulfillment_options`
 - [ ] 在 `executor.py` 实现对应 handler + `serialization.py` 的 `order_payload()`、`policies_payload()`、`fulfillment_payload()`
 - [ ] 实现 `gates.py` 的 `remember_order_items()`：订单商品加入溯源，让用户能直接重新购买以前买过的东西
@@ -406,6 +409,9 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 
 ### 16 · 编排器与流式循环
 
+> ⚠️ 这一步比前面的都重，是 Stage C 中最长的一步——`turn.py` 是仓库里最复杂的模块。
+> 预计花的时间可能等于 Step 11-15 的总和。
+
 **起点**：工具执行、门控、展示、落地规则都有了，但还是一个脚本在驱动循环。
 是时候把循环提取成一个正式的编排器了。
 
@@ -421,9 +427,9 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
   - `compact_history()`：历史消息超过 token 阈值时，压缩最老的工具结果
   - `close_open_tool_uses()`：中途中断时修复未配对的 tool_use
 - [ ] 实现 `shopping-agent/runtime-messages-api/shopping_agent_runtime/orchestrator.py`：
-  - `ShoppingAgent.__init__()`：构建静态提示词、工具列表、展示组件、MemoryRuntime
+  - `ShoppingAgent.__init__()`：构建静态提示词、工具列表、展示组件（MemoryRuntime 在 Step 17 接入）
   - `stream_turn()`：async generator，是整个购物 agent 的心脏：
-    1. 并行预取（preferences、cart、memory tier-one、account）
+    1. 并行预取（preferences、cart — Step 17 加入 memory tier-one）
     2. 构建动态上下文
     3. 落地规则决定首轮是否强制工具
     4. 多轮循环（最多 `max_tool_iterations` 轮）
@@ -481,8 +487,9 @@ JSON 一能解析就开始，用户感知延迟少了一个 RTT。但这也意�
 
 ## Stage D · 第二个角色逼出共享层
 
-> 你要开始写商户 agent 了。打开购物 agent 的代码，发现 `fencing.py`、`memory.py`、
-> `skills.py`、`grounding.py`、`execution.py`、`streaming.py`、`turn.py`、`prompt_assembly.py`
+> 你要开始写商户 agent 了。打开购物 agent 的代码，发现 `types.py`（共享类型）、`config.py`、
+> `fencing.py`、`memory.py`、`skills.py`、`prompt_assembly.py`、`grounding.py`、
+> `presentation.py`、`execution.py`、`streaming.py`、`turn.py`、`testing.py`
 > 这些模块和购物场景无关，是通用的。复制粘贴？不行——规则 6 说「每个机制只定义一次」。
 
 ### 18 · 提取 commerce_common
@@ -575,7 +582,7 @@ JSON 一能解析就开始，用户感知延迟少了一个 RTT。但这也意�
 
 **设计决策**：为什么 apply 时要在**当前配置**下重新检查护栏，而不是信任 stage 时的检查？
 因为配置可能在 stage 和 apply 之间被管理员修改了（比如收紧了价格变动上限）。
-重新检查确保应用时仍然合规。这就是规则 5 ——写操作有门控。
+重新检查确保应用时仍然合规。这就是规则 4 ——写操作有门控。
 参考 `merchant-agent/core/merchant_agent/changes.py` 的 `ChangeLedger.apply()` 方法。
 
 ---
