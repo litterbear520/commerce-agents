@@ -3,802 +3,516 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Commerce Agents 系统架构</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Noto+Serif+SC:wght@400..700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Commerce Agents 图解</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* ═══════════════════════════════════════════
-   主题令牌（浅色）
-   ═══════════════════════════════════════════ */
-:root {
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --surface-2: #ffffff;
-  --text: #0b0b0b;
-  --text-2: #52514e;
-  --text-3: #898781;
-  --line: rgba(11, 11, 11, 0.1);
-  --line-strong: rgba(11, 11, 11, 0.2);
-  --fill: rgba(11, 11, 11, 0.05);
-  --fill-2: rgba(11, 11, 11, 0.1);
-  --accent: #184f95;
-  --accent-bg: #cde2fb;
-  --card-bg: #f0eee6;
-  --card-border: #e8e6dc;
-
-  /* 角色色 */
-  --shopping: #1a6b5a;
-  --shopping-bg: #e6f5f0;
-  --merchant: #9c5e1a;
-  --merchant-bg: #fdf0e0;
-  --common: #5b4bb5;
-  --common-bg: #ece8fb;
-  --safety: #a63030;
-  --safety-bg: #fce8e8;
-
-  /* 字体 */
-  --font-serif: 'Source Serif 4', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
-  --font-sans: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  /* 布局 */
-  --max-w: 1120px;
-  --radius: 12px;
-  --radius-lg: 20px;
-
-  color-scheme: light;
-}
-
-/* ═══════════════════════════════════════════
-   主题令牌（深色 — 跟随系统）
-   ═══════════════════════════════════════════ */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --page: #151515;
-    --surface: #20201f;
-    --surface-2: #2c2c2a;
-    --text: #f0efec;
-    --text-2: #c3c2b7;
-    --text-3: #898781;
-    --line: rgba(255, 255, 255, 0.1);
-    --line-strong: rgba(255, 255, 255, 0.2);
-    --fill: rgba(255, 255, 255, 0.05);
-    --fill-2: rgba(255, 255, 255, 0.1);
-    --accent: #6da7ec;
-    --accent-bg: #032042;
-    --card-bg: #262521;
-    --card-border: #3a3935;
-
-    --shopping: #5cc4a8;
-    --shopping-bg: #1a2e28;
-    --merchant: #e0a55a;
-    --merchant-bg: #2e261a;
-    --common: #a99de8;
-    --common-bg: #22202e;
-    --safety: #e87070;
-    --safety-bg: #2e1a1a;
-    color-scheme: dark;
+  :root {
+    --bg: #F6F6F2;
+    --paper: #FFFFFF;
+    --ink: #1D2228;
+    --ink-2: #5A6370;
+    --ink-3: #8B939D;
+    --line: #D6DAD0;
+    --line-2: #E8EBE4;
+    --shop: #18806E;
+    --shop-bg: #E0F0EA;
+    --shop-line: #A8D5C4;
+    --merch: #C06820;
+    --merch-bg: #F5E8D8;
+    --merch-line: #E0C4A0;
+    --gate: #C03848;
+    --gate-bg: #F5DDE0;
+    --gate-line: #E0A8B0;
+    --core: #3E5168;
+    --core-bg: #E4E9F0;
+    --core-line: #B0BCCC;
+    --display: 'DM Sans', -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --body: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Noto Sans CJK SC", system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
-}
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141820; --paper: #1C222C; --ink: #E4E8E0; --ink-2: #A0A8B0; --ink-3: #6C747E;
+      --line: #2C3440; --line-2: #242C38;
+      --shop: #50C0A8; --shop-bg: #162C28; --shop-line: #205848;
+      --merch: #E09058; --merch-bg: #302018; --merch-line: #584028;
+      --gate: #E07080; --gate-bg: #301820; --gate-line: #582838;
+      --core: #A8B8D0; --core-bg: #202838; --core-line: #384860;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141820; --paper: #1C222C; --ink: #E4E8E0; --ink-2: #A0A8B0; --ink-3: #6C747E;
+    --line: #2C3440; --line-2: #242C38;
+    --shop: #50C0A8; --shop-bg: #162C28; --shop-line: #205848;
+    --merch: #E09058; --merch-bg: #302018; --merch-line: #584028;
+    --gate: #E07080; --gate-bg: #301820; --gate-line: #582838;
+    --core: #A8B8D0; --core-bg: #202838; --core-line: #384860;
+  }
 
-/* ═══════════════════════════════════════════
-   主题令牌（深色 — 手动切换）
-   ═══════════════════════════════════════════ */
-:root[data-theme="dark"] {
-  --page: #151515;
-  --surface: #20201f;
-  --surface-2: #2c2c2a;
-  --text: #f0efec;
-  --text-2: #c3c2b7;
-  --text-3: #898781;
-  --line: rgba(255, 255, 255, 0.1);
-  --line-strong: rgba(255, 255, 255, 0.2);
-  --fill: rgba(255, 255, 255, 0.05);
-  --fill-2: rgba(255, 255, 255, 0.1);
-  --accent: #6da7ec;
-  --accent-bg: #032042;
-  --card-bg: #262521;
-  --card-border: #3a3935;
+  body { background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.72; font-size: 16px; }
+  main { max-width: 920px; margin: 0 auto; padding: 56px 24px 100px; }
+  h1, h2 { font-family: var(--display); font-weight: 700; text-wrap: balance; line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(32px, 4.8vw, 48px); }
+  h2 { font-size: clamp(22px, 3vw, 28px); }
+  p { max-width: 38em; margin: 0; }
+  code { font-family: var(--mono); font-size: 0.85em; background: var(--core-bg); color: var(--ink); padding: 2px 6px; border-radius: 4px; }
 
-  --shopping: #5cc4a8;
-  --shopping-bg: #1a2e28;
-  --merchant: #e0a55a;
-  --merchant-bg: #2e261a;
-  --common: #a99de8;
-  --common-bg: #22202e;
-  --safety: #e87070;
-  --safety-bg: #2e1a1a;
-  color-scheme: dark;
-}
+  header { padding-bottom: 44px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px; }
+  .lede { font-size: 18px; color: var(--ink-2); margin-top: 14px; line-height: 1.7; }
+  .lede strong { color: var(--ink); font-weight: 600; }
 
-/* ═══════════════════════════════════════════
-   基础样式
-   ═══════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; }
+  section { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+  .section-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .section-num { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--ink-3); letter-spacing: 0.06em; }
+  .section-body { color: var(--ink-2); }
+  .section-body strong { color: var(--ink); font-weight: 600; }
+  ul.pts { margin: 10px 0 0; padding-left: 1.3em; max-width: 40em; }
+  ul.pts li { margin: 5px 0; }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.65;
-  color: var(--text-2);
-  background: var(--page);
-  -webkit-font-smoothing: antialiased;
-}
+  .fig { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 24px; overflow-x: auto; margin-top: 4px; }
+  .fig svg { display: block; width: 100%; height: auto; max-width: 880px; margin: 0 auto; }
+  .fig figcaption { font-size: 13px; color: var(--ink-3); font-family: var(--mono); text-align: center; margin-top: 16px; }
 
-h1, h2, h3, h4 {
-  font-family: var(--font-serif);
-  color: var(--text);
-  line-height: 1.25;
-  letter-spacing: -0.015em;
-}
+  .tag { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.03em; }
+  .tag-shop { color: var(--shop); background: var(--shop-bg); }
+  .tag-merch { color: var(--merch); background: var(--merch-bg); }
+  .tag-gate { color: var(--gate); background: var(--gate-bg); }
 
-h1 { font-size: 2.25rem; font-weight: 500; margin: 0 0 16px; }
-h2 { font-size: 1.5rem; font-weight: 500; margin: 64px 0 24px; }
-h3 { font-size: 1.15rem; font-weight: 600; margin: 32px 0 12px; letter-spacing: 0; }
+  /* SVG typography */
+  svg text { font-family: var(--body); }
+  svg .t-label { font-size: 14px; fill: var(--ink); font-weight: 600; }
+  svg .t-sub { font-size: 12px; fill: var(--ink-2); }
+  svg .t-mono { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); font-weight: 500; }
+  svg .t-big { font-family: var(--display); font-size: 18px; font-weight: 700; fill: var(--ink); }
+  svg .t-inv { fill: var(--bg); }
+  svg .t-shop { fill: var(--shop); } svg .t-merch { fill: var(--merch); } svg .t-gate { fill: var(--gate); } svg .t-core { fill: var(--core); }
+  svg .s-line { stroke: var(--line); fill: none; stroke-width: 1.5; }
+  svg .s-arrow { stroke: var(--ink-3); fill: none; stroke-width: 1.6; marker-end: url(#ah); }
+  svg .s-arrow-shop { stroke: var(--shop); fill: none; stroke-width: 1.6; marker-end: url(#ah-shop); }
+  svg .s-arrow-merch { stroke: var(--merch); fill: none; stroke-width: 1.6; marker-end: url(#ah-merch); }
+  svg .s-dash { stroke: var(--line); fill: none; stroke-width: 1.5; stroke-dasharray: 5 4; }
 
-p { margin: 0 0 16px; }
+  .readmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 20px; }
+  .readmap div { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .readmap .k { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--ink-3); }
+  .readmap .v { margin-top: 6px; font-size: 15px; }
 
-a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 2px; }
-a:hover { text-decoration-color: var(--accent); }
-
-strong { color: var(--text); }
-
-code {
-  font-family: var(--font-mono);
-  font-size: 0.875em;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  padding: 1px 6px;
-  border-radius: 5px;
-}
-
-pre {
-  background: var(--surface) !important;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 16px 20px;
-  overflow-x: auto;
-  font-size: 13px;
-  line-height: 1.6;
-}
-pre code { background: none; border: none; padding: 0; font-size: inherit; }
-
-img { max-width: 100%; }
-hr { border: none; border-top: 1px solid var(--line-strong); margin: 48px 0; }
-
-/* ═══════════════════════════════════════════
-   布局
-   ═══════════════════════════════════════════ */
-.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 32px; }
-
-@media (max-width: 600px) {
-  .wrap { padding: 0 20px; }
-  h1 { font-size: 1.75rem; }
-  h2 { font-size: 1.25rem; margin-top: 48px; }
-}
-
-/* ═══════════════════════════════════════════
-   导航栏
-   ═══════════════════════════════════════════ */
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--page);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(8px);
-}
-
-.nav-inner {
-  max-width: var(--max-w);
-  margin: 0 auto;
-  padding: 0 32px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.nav-title {
-  font-family: var(--font-serif);
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text);
-  text-decoration: none;
-  letter-spacing: -0.01em;
-}
-
-.nav-right { display: flex; align-items: center; gap: 8px; }
-
-.theme-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text-2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, border-color 0.2s;
-  font-size: 16px;
-  padding: 0;
-}
-.theme-btn:hover { background: var(--fill-2); border-color: var(--line-strong); }
-.theme-btn svg { width: 18px; height: 18px; }
-
-@media (max-width: 600px) {
-  .nav-inner { padding: 0 20px; }
-}
-
-/* ═══════════════════════════════════════════
-   Hero
-   ═══════════════════════════════════════════ */
-.hero {
-  text-align: center;
-  padding: 72px 24px 48px;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.hero-label {
-  display: inline-block;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 16px;
-}
-
-.hero h1 {
-  font-size: 2.5rem;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  margin-bottom: 20px;
-}
-
-.hero p {
-  font-size: 17px;
-  color: var(--text-2);
-  line-height: 1.7;
-  margin: 0;
-}
-
-.hero-divider {
-  width: 48px;
-  height: 2px;
-  background: var(--card-border);
-  margin: 36px auto 0;
-  border-radius: 1px;
-}
-
-@media (max-width: 600px) {
-  .hero { padding: 48px 20px 32px; }
-  .hero h1 { font-size: 1.85rem; }
-  .hero p { font-size: 15px; }
-}
-
-/* ═══════════════════════════════════════════
-   Section
-   ═══════════════════════════════════════════ */
-.section { padding: 0 0 48px; }
-
-/* ═══════════════════════════════════════════
-   卡片
-   ═══════════════════════════════════════════ */
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-}
-
-.card h3 { margin-top: 0; }
-.card h3:first-child { margin-top: 0; }
-
-/* ═══════════════════════════════════════════
-   双列网格
-   ═══════════════════════════════════════════ */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-@media (max-width: 860px) {
-  .grid-2 { grid-template-columns: 1fr; }
-  .grid-3 { grid-template-columns: 1fr; }
-  .grid-4 { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 600px) {
-  .grid-4 { grid-template-columns: 1fr; }
-}
-
-/* ═══════════════════════════════════════════
-   角色标签
-   ═══════════════════════════════════════════ */
-.tag {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 3px 10px;
-  border-radius: 100px;
-}
-
-.tag-shopping { background: var(--shopping-bg); color: var(--shopping); }
-.tag-merchant { background: var(--merchant-bg); color: var(--merchant); }
-.tag-common { background: var(--common-bg); color: var(--common); }
-.tag-safety { background: var(--safety-bg); color: var(--safety); }
-
-/* ═══════════════════════════════════════════
-   表格
-   ═══════════════════════════════════════════ */
-.table-wrap { overflow-x: auto; margin: 16px 0; }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-th, td {
-  text-align: left;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--line);
-}
-
-th {
-  font-weight: 500;
-  color: var(--text);
-  border-bottom-color: var(--line-strong);
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-td { color: var(--text-2); }
-
-/* ═══════════════════════════════════════════
-   流程步骤
-   ═══════════════════════════════════════════ */
-.flow {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.flow-step {
-  display: flex;
-  gap: 16px;
-  padding: 14px 0;
-}
-
-.flow-step + .flow-step { border-top: 1px solid var(--line); }
-
-.flow-num {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--fill-2);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-}
-
-.flow-body { flex: 1; min-width: 0; }
-.flow-body strong { font-weight: 600; }
-.flow-body p { margin: 0; font-size: 14px; line-height: 1.6; }
-
-/* ═══════════════════════════════════════════
-   模块列表
-   ═══════════════════════════════════════════ */
-.mod-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-.mod-item {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 10px 14px;
-  background: var(--fill);
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.mod-name {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--common);
-  white-space: nowrap;
-}
-
-.mod-desc { color: var(--text-2); font-size: 13px; }
-
-/* ═══════════════════════════════════════════
-   Skills 列表
-   ═══════════════════════════════════════════ */
-.skill-list { list-style: none; padding: 0; margin: 12px 0 0; }
-
-.skill-list li {
-  padding: 8px 0;
-  font-size: 14px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-}
-
-.skill-list li:last-child { border-bottom: none; }
-
-.skill-name {
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-/* ═══════════════════════════════════════════
-   SVG 图表
-   ═══════════════════════════════════════════ */
-.diagram {
-  display: flex;
-  justify-content: center;
-  margin: 32px 0;
-  overflow-x: auto;
-}
-
-.diagram svg { max-width: 100%; height: auto; }
-
-.diagram svg text {
-  font-family: var(--font-sans);
-}
-
-.diagram svg .label-mono {
-  font-family: var(--font-mono);
-}
-
-/* SVG 用 CSS 变量着色 */
-.diagram svg .fill-page { fill: var(--page); }
-.diagram svg .fill-surface { fill: var(--surface); }
-.diagram svg .fill-card { fill: var(--card-bg); }
-.diagram svg .fill-shopping { fill: var(--shopping-bg); }
-.diagram svg .fill-merchant { fill: var(--merchant-bg); }
-.diagram svg .fill-common { fill: var(--common-bg); }
-.diagram svg .fill-safety { fill: var(--safety-bg); }
-.diagram svg .stroke-line { stroke: var(--line-strong); }
-.diagram svg .stroke-shopping { stroke: var(--shopping); }
-.diagram svg .stroke-merchant { stroke: var(--merchant); }
-.diagram svg .stroke-common { stroke: var(--common); }
-.diagram svg .text-primary { fill: var(--text); }
-.diagram svg .text-secondary { fill: var(--text-2); }
-.diagram svg .text-tertiary { fill: var(--text-3); }
-.diagram svg .text-shopping { fill: var(--shopping); }
-.diagram svg .text-merchant { fill: var(--merchant); }
-.diagram svg .text-common { fill: var(--common); }
-
-/* ═══════════════════════════════════════════
-   页脚
-   ═══════════════════════════════════════════ */
-.footer {
-  border-top: 1px solid var(--line);
-  padding: 32px 0;
-  margin-top: 48px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-/* ═══════════════════════════════════════════
-   辅助
-   ═══════════════════════════════════════════ */
-.muted { color: var(--text-3); }
-.nowrap { white-space: nowrap; }
-.text-center { text-align: center; }
-.mt-0 { margin-top: 0; }
-.mb-0 { margin-bottom: 0; }
-.mb-8 { margin-bottom: 8px; }
-.mb-16 { margin-bottom: 16px; }
-.mb-24 { margin-bottom: 24px; }
-
-@media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
+  @media (max-width: 600px) {
+    .fig { padding: 16px 12px; }
+  }
 </style>
-</head>
-<body>
 
-<!-- 导航栏 -->
-<nav class="nav">
-  <div class="nav-inner">
-    <span class="nav-title">Commerce Agents</span>
-    <div class="nav-right">
-      <button class="theme-btn" id="themeToggle" type="button" aria-label="切换主题">
-        <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-    </div>
-  </div>
-</nav>
+<main>
+<!-- shared SVG defs -->
+<svg hidden aria-hidden="true" style="position:absolute;width:0;height:0">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto"><path d="M0 0L10 4L0 8z" fill="var(--ink-3)"/></marker>
+    <marker id="ah-shop" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto"><path d="M0 0L10 4L0 8z" fill="var(--shop)"/></marker>
+    <marker id="ah-merch" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto"><path d="M0 0L10 4L0 8z" fill="var(--merch)"/></marker>
+    <marker id="ah-gate" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto"><path d="M0 0L10 4L0 8z" fill="var(--gate)"/></marker>
+  </defs>
+</svg>
 
-<!-- Hero -->
-<header class="hero">
-  <div class="hero-label">Anthropic · 参考实现</div>
-  <h1>Commerce Agents 系统架构</h1>
-  <p>两个基于 Claude 的电商 Agent——购物助手和商家助手——的完整参考实现。一套提示词、技能和工具合约，定义一次，在 Messages API、Agent SDK 和 Managed Agents 三条路径上运行；四个行业示例展示从目录搜索到库存管理的完整流程。</p>
-  <div class="hero-divider"></div>
+<header>
+  <div class="eyebrow">anthropics / commerce-agents</div>
+  <h1>一个大脑，两种店员</h1>
+  <p class="lede">这个仓库是一份<strong>范本</strong>：教你怎么用 Claude 给一家店做两个 AI 助理——一个面向顾客，一个面向店员——而且做得安全。不是产品，是可以直接对照代码学习的参考实现。</p>
 </header>
 
-<main class="wrap">
-<!-- ════════════════════════════════════════════
-     Section 1: 分层架构图
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>分层架构</h2>
-<p>整个系统分四层。上层依赖下层，同层之间不互相依赖。每层是独立的 pip 包，一个机制只在一处定义。</p>
-
-<div class="diagram">
-<svg viewBox="0 0 800 420" width="800" xmlns="http://www.w3.org/2000/svg">
-  <!-- Layer 4: 行业示例 -->
-  <rect x="40" y="12" width="720" height="52" rx="12" class="fill-card" stroke="var(--card-border)" stroke-width="1"/>
-  <text x="400" y="32" text-anchor="middle" font-size="11" font-weight="600" class="text-tertiary" letter-spacing="0.08em">行业示例（EXAMPLES）</text>
-  <text x="130" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Retail</text>
-  <text x="305" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Travel</text>
-  <text x="490" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Telecom</text>
-  <text x="670" y="52" text-anchor="middle" font-size="13" font-weight="500" class="text-primary">Entertainment</text>
-
-  <!-- Arrow -->
-  <line x1="400" y1="64" x2="400" y2="88" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-
-  <!-- Layer 3: 三条运行路径 -->
-  <rect x="40" y="88" width="225" height="56" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
-  <text x="152" y="112" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)">Messages API</text>
-  <text x="152" y="132" text-anchor="middle" font-size="10" class="text-secondary">参考循环 · 完整功能</text>
-
-  <rect x="288" y="88" width="225" height="56" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
-  <text x="400" y="112" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)">Agent SDK</text>
-  <text x="400" y="132" text-anchor="middle" font-size="10" class="text-secondary">SDK 驱动循环 · 预取接地</text>
-
-  <rect x="536" y="88" width="225" height="56" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1" opacity="0.85"/>
-  <text x="648" y="112" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--accent)">Managed Agents</text>
-  <text x="648" y="132" text-anchor="middle" font-size="10" class="text-secondary">平台托管 · MCP Server</text>
-
-  <!-- Arrows -->
-  <line x1="152" y1="144" x2="250" y2="176" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-  <line x1="400" y1="144" x2="400" y2="176" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-  <line x1="648" y1="144" x2="550" y2="176" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-
-  <!-- Layer 2: 两个核心 -->
-  <rect x="40" y="176" width="340" height="88" rx="12" class="fill-shopping" stroke="var(--shopping)" stroke-width="1"/>
-  <text x="210" y="200" text-anchor="middle" font-size="12" font-weight="600" class="text-shopping">Shopping Agent Core</text>
-  <text x="210" y="220" text-anchor="middle" font-size="10" class="text-secondary">StorefrontBackend · 购物车门控</text>
-  <text x="210" y="240" text-anchor="middle" font-size="10" class="text-secondary">提示词 · 工具合约 · 五个技能</text>
-  <text x="210" y="256" text-anchor="middle" font-size="10" class="text-tertiary label-mono">shopping_agent</text>
-
-  <rect x="420" y="176" width="340" height="88" rx="12" class="fill-merchant" stroke="var(--merchant)" stroke-width="1"/>
-  <text x="590" y="200" text-anchor="middle" font-size="12" font-weight="600" class="text-merchant">Merchant Agent Core</text>
-  <text x="590" y="220" text-anchor="middle" font-size="10" class="text-secondary">MerchantBackend · 暂存→审批→应用</text>
-  <text x="590" y="240" text-anchor="middle" font-size="10" class="text-secondary">提示词 · 工具合约 · 五个技能</text>
-  <text x="590" y="256" text-anchor="middle" font-size="10" class="text-tertiary label-mono">merchant_agent</text>
-
-  <!-- Arrows -->
-  <line x1="210" y1="264" x2="300" y2="298" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-  <line x1="590" y1="264" x2="500" y2="298" class="stroke-line" stroke-width="1" stroke-dasharray="4 3"/>
-
-  <!-- Layer 1: 共享层 -->
-  <rect x="120" y="298" width="560" height="68" rx="12" class="fill-common" stroke="var(--common)" stroke-width="1"/>
-  <text x="400" y="322" text-anchor="middle" font-size="12" font-weight="600" class="text-common">commerce_common</text>
-  <text x="400" y="342" text-anchor="middle" font-size="10" class="text-secondary">配置 · 围栏 · 记忆 · 技能 · 接地 · 展示 · 委托 · 执行器 · 流式 · 回合</text>
-  <text x="400" y="358" text-anchor="middle" font-size="10" class="text-tertiary">两个角色共享的全部机制</text>
-</svg>
-</div>
-
-<p>数据流向：模型选择工具 → 执行器做门控、调用后端、围栏结果 → 展示调用由服务端填充实际数据后变成 UI 事件推送给前端。</p>
+<!-- 1 两个角色 -->
+<section>
+  <div class="section-head">
+    <h2>店门口一个，柜台后面一个</h2>
+  </div>
+  <p class="section-body"><span class="tag tag-shop">shopping-agent</span> 顾客用——找东西、比较、凑方案、放进购物车、问订单和退换货。<br>
+  <span class="tag tag-merch">merchant-agent</span> 店员用——看销售、改商品页、处理缺货告警、调价做促销、写营销稿。<br>
+  每个助理有 5 个「技能」（5 种它会处理的场景），每种一份 <code>SKILL.md</code>。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 260" role="img" aria-label="购物助理面向顾客，商家助理面向店员，分列商店两侧">
+      <!-- store frame -->
+      <rect x="30" y="30" width="800" height="200" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="430" y="22" text-anchor="middle" class="t-big">ACME 商店</text>
+      <!-- divider -->
+      <line x1="430" y1="30" x2="430" y2="230" class="s-dash"/>
+      <!-- left: shopping -->
+      <rect x="55" y="52" width="350" height="160" rx="8" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="1"/>
+      <text x="230" y="80" text-anchor="middle" class="t-label t-shop" style="font-size:16px">购物助理</text>
+      <text x="230" y="100" text-anchor="middle" class="t-sub">面向顾客</text>
+      <text x="80" y="128" class="t-sub">搜索 · 详情 · 比较 · 凑方案</text>
+      <text x="80" y="148" class="t-sub">购物车 · 结账交接</text>
+      <text x="80" y="168" class="t-sub">订单 · 政策 · 记住偏好</text>
+      <text x="80" y="192" class="t-mono">shopping-agent/</text>
+      <!-- customer icon -->
+      <circle cx="375" cy="140" r="10" fill="var(--shop)"/>
+      <line x1="375" y1="150" x2="375" y2="174" stroke="var(--shop)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="362" y1="162" x2="388" y2="162" stroke="var(--shop)" stroke-width="3" stroke-linecap="round"/>
+      <!-- right: merchant -->
+      <rect x="455" y="52" width="350" height="160" rx="8" fill="var(--merch-bg)" stroke="var(--merch-line)" stroke-width="1"/>
+      <text x="630" y="80" text-anchor="middle" class="t-label t-merch" style="font-size:16px">商家助理</text>
+      <text x="630" y="100" text-anchor="middle" class="t-sub">面向店员</text>
+      <text x="480" y="128" class="t-sub">业绩快照 · 指标查询</text>
+      <text x="480" y="148" class="t-sub">改商品 · 调价 · 促销 · 营销</text>
+      <text x="480" y="168" class="t-sub">库存告警 · 订单问题</text>
+      <text x="480" y="192" class="t-mono">merchant-agent/</text>
+      <!-- staff icon -->
+      <circle cx="775" cy="140" r="10" fill="var(--merch)"/>
+      <line x1="775" y1="150" x2="775" y2="174" stroke="var(--merch)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="762" y1="162" x2="788" y2="162" stroke="var(--merch)" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <figcaption>两个角色共享同一个 commerce_common，各自有 core + skills + 三条运行路径</figcaption>
+  </figure>
 </section>
 
-<!-- ════════════════════════════════════════════
-     Section 2: 两个 Agent
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>两个 Agent</h2>
-<p>每个角色有一套提示词、五个技能、一组工具合约和一个后端接口（部署方实现的唯一 ABC）。</p>
+<!-- 2 一次对话的流程 -->
+<section>
+  <div class="section-head">
+    <h2>一句话进来，发生了什么</h2>
+  </div>
+  <p class="section-body">顾客的消息和固定的提示词打包发给 Claude。Claude 只负责<strong>想</strong>——该调什么工具、怎么回复。真正碰数据的事全部通过工具交给服务器上的<strong>执行器</strong>。执行器先过安全门，再调你的后端。结果返回给 Claude 继续推理，直到它决定结束本轮。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 340" role="img" aria-label="一轮对话的数据流：用户消息 → 组装 prompt → Claude 推理 → 调用工具 → 执行器过安全门 → 你的后端 → 结果回 Claude → UI 事件推给前端">
+      <!-- row 1: the main pipeline -->
+      <!-- user message -->
+      <rect x="20" y="40" width="120" height="64" rx="8" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="1"/>
+      <text x="80" y="66" text-anchor="middle" class="t-label" style="font-size:13px">用户消息</text>
+      <text x="80" y="84" text-anchor="middle" class="t-mono" style="font-size:10px">"两人帐篷，250内"</text>
+      <!-- arrow -->
+      <line x1="140" y1="72" x2="170" y2="72" class="s-arrow"/>
+      <!-- prompt assembly -->
+      <rect x="174" y="24" width="150" height="96" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="249" y="46" text-anchor="middle" class="t-label" style="font-size:13px">组装 Prompt</text>
+      <rect x="186" y="54" width="126" height="26" rx="4" fill="var(--core-bg)"/>
+      <text x="249" y="72" text-anchor="middle" class="t-mono" style="font-size:10px">固定：提示词+工具+技能</text>
+      <rect x="186" y="84" width="126" height="26" rx="4" fill="var(--gate-bg)" stroke="var(--gate-line)" stroke-width="0.8" stroke-dasharray="3 2"/>
+      <text x="249" y="102" text-anchor="middle" class="t-mono" style="font-size:10px">围栏：资料/购物车/记忆</text>
+      <!-- arrow -->
+      <line x1="324" y1="72" x2="354" y2="72" class="s-arrow"/>
+      <!-- Claude -->
+      <rect x="358" y="30" width="130" height="84" rx="40" fill="var(--core)" stroke="var(--core-line)" stroke-width="1"/>
+      <text x="423" y="66" text-anchor="middle" class="t-big t-inv" style="font-size:17px">Claude</text>
+      <text x="423" y="86" text-anchor="middle" class="t-sub t-inv" style="font-size:11px">推理 → 选工具</text>
+      <!-- arrow down to executor -->
+      <line x1="423" y1="114" x2="423" y2="156" class="s-arrow"/>
+      <text x="438" y="140" class="t-mono" style="font-size:10px">tool_use</text>
 
-<div class="grid-2">
-  <div class="card">
-    <span class="tag tag-shopping">Shopping Agent</span>
-    <h3 class="mt-0" style="margin-top:16px">购物 Agent</h3>
-    <p>嵌入商家 App，帮助顾客搜索、比较、规划、下单、查询订单和政策。</p>
-    <p><strong>后端：</strong><code>StorefrontBackend</code> — 购物车操作是唯一的写入；<code>checkout</code> 不下单不收费，只渲染购物车交给宿主。</p>
-    <p class="mb-0"><strong>技能：</strong>search-discovery、planning-goals、purchase-research、memory-personalization、customer-care</p>
-  </div>
-  <div class="card">
-    <span class="tag tag-merchant">Merchant Agent</span>
-    <h3 class="mt-0" style="margin-top:16px">商家 Agent</h3>
-    <p>供运营人员使用的后台助手，解释业绩、维护商品、处理警报、定价促销、草拟营销活动。</p>
-    <p><strong>后端：</strong><code>MerchantBackend</code> — 所有写入都是暂存提案（<code>stage_*</code>），需人工批准后 <code>apply_change</code> 才执行平台写入。</p>
-    <p class="mb-0"><strong>技能：</strong>performance-insights、catalog-listings、inventory-operations、pricing-promotions、marketing-campaigns</p>
-  </div>
-</div>
+      <!-- row 2: execution pipeline -->
+      <!-- executor -->
+      <rect x="340" y="160" width="166" height="60" rx="8" fill="var(--paper)" stroke="var(--ink-3)" stroke-width="1.5"/>
+      <text x="423" y="184" text-anchor="middle" class="t-label" style="font-size:13px">执行器</text>
+      <text x="423" y="202" text-anchor="middle" class="t-mono" style="font-size:10px">校验 → 安全门 → 分派</text>
+      <!-- arrow right to backend -->
+      <line x1="506" y1="190" x2="556" y2="190" class="s-arrow"/>
+      <text x="531" y="182" text-anchor="middle" class="t-mono" style="font-size:9px">通过</text>
+      <!-- your backend -->
+      <rect x="560" y="160" width="130" height="60" rx="8" fill="var(--merch-bg)" stroke="var(--merch-line)" stroke-width="1"/>
+      <text x="625" y="184" text-anchor="middle" class="t-label" style="font-size:13px">你的后端</text>
+      <text x="625" y="202" text-anchor="middle" class="t-mono" style="font-size:10px">商品库 / 订单 / 库存</text>
+
+      <!-- result arrow back up to Claude -->
+      <path d="M690 190 L740 190 L740 72 L490 72" class="s-arrow"/>
+      <text x="752" y="134" class="t-mono" style="font-size:10px;writing-mode:vertical-lr">tool_result</text>
+
+      <!-- blocked path down -->
+      <line x1="423" y1="220" x2="423" y2="252" stroke="var(--gate)" stroke-width="1.4" marker-end="url(#ah-gate)"/>
+      <text x="438" y="240" class="t-mono t-gate" style="font-size:9px">被拦</text>
+      <rect x="358" y="256" width="130" height="36" rx="6" fill="var(--gate-bg)" stroke="var(--gate-line)" stroke-width="0.8"/>
+      <text x="423" y="278" text-anchor="middle" class="t-sub" style="font-size:11px">held — 告诉 Claude</text>
+
+      <!-- text output: Claude → UI -->
+      <path d="M358 90 L280 90 L280 190 L222 190" class="s-arrow-shop"/>
+      <text x="268" y="148" class="t-mono t-shop" style="font-size:10px;writing-mode:vertical-lr">text + ui 事件</text>
+      <!-- frontend -->
+      <rect x="40" y="160" width="178" height="100" rx="8" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="1"/>
+      <text x="129" y="184" text-anchor="middle" class="t-label" style="font-size:13px">顾客看到的</text>
+      <text x="129" y="204" text-anchor="middle" class="t-sub" style="font-size:11px">文字流 + 商品卡片</text>
+      <rect x="56" y="218" width="44" height="28" rx="4" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
+      <rect x="108" y="218" width="44" height="28" rx="4" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
+      <rect x="160" y="218" width="44" height="28" rx="4" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
+    </svg>
+    <figcaption>orchestrator.py 驱动循环 · executor.py 跑工具 · 安全门写在 gates.py 和 fencing.py 里</figcaption>
+  </figure>
 </section>
 
-<!-- ════════════════════════════════════════════
-     Section 3: 三条运行路径
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>三条运行路径</h2>
-<p>同一个 Agent 定义（提示词、技能、工具合约）在三种运行架构上运行。安全规则在工具调用内执行，三条路径一致。</p>
-
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr>
-      <th></th>
-      <th>Messages API</th>
-      <th>Agent SDK</th>
-      <th>Managed Agents</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>谁驱动循环</strong></td>
-      <td>宿主应用</td>
-      <td>SDK</td>
-      <td>平台</td>
-    </tr>
-    <tr>
-      <td><strong>入口</strong></td>
-      <td><code>ShoppingAgent</code> / <code>MerchantAgent</code></td>
-      <td><code>ClaudeAgentOptions</code> + Toolset</td>
-      <td><code>agent.yaml</code> + MCP server</td>
-    </tr>
-    <tr>
-      <td><strong>特点</strong></td>
-      <td>参考实现，功能最完整：接地规则、记忆提取、急切工具分发、流式部分 UI、分析委托</td>
-      <td>SDK 管理循环；接地以预取形式支持；宿主调用记忆提取</td>
-      <td>平台托管；无接地规则；记忆仅通过工具写入</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+<!-- 3 数据流管道 -->
+<section>
+  <div class="section-head">
+    <h2>数据怎样流过系统</h2>
+  </div>
+  <p class="section-body">每轮对话走一条固定管道。固定的部分能被缓存（成本降到 1/10），变化的部分被围栏包住（模型只把它当资料，不当指令）。模型的判断通过展示型工具调用到达前端——模型只传 ID 和理由，服务端填充真实数据。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 220" role="img" aria-label="数据流管道：静态 prompt 被缓存，动态数据被围栏包裹，模型输出通过展示工具变成 UI">
+      <!-- stage 1: static (cacheable) -->
+      <rect x="20" y="50" width="160" height="120" rx="8" fill="var(--core-bg)" stroke="var(--core-line)" stroke-width="1.5"/>
+      <text x="100" y="76" text-anchor="middle" class="t-label" style="font-size:13px">静态部分</text>
+      <text x="100" y="96" text-anchor="middle" class="t-sub" style="font-size:11px">提示词 · 工具列表 · 技能</text>
+      <text x="100" y="114" text-anchor="middle" class="t-sub" style="font-size:11px">每轮字节不变</text>
+      <rect x="42" y="128" width="116" height="24" rx="4" fill="var(--core)" opacity="0.15"/>
+      <text x="100" y="146" text-anchor="middle" class="t-mono t-core" style="font-size:10px">cache_control ✓</text>
+      <!-- arrow -->
+      <line x1="180" y1="110" x2="208" y2="110" class="s-arrow"/>
+      <!-- stage 2: dynamic (fenced) -->
+      <rect x="212" y="50" width="160" height="120" rx="8" fill="var(--gate-bg)" stroke="var(--gate-line)" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <text x="292" y="76" text-anchor="middle" class="t-label" style="font-size:13px">动态围栏</text>
+      <text x="292" y="96" text-anchor="middle" class="t-sub" style="font-size:11px">用户资料 · 购物车</text>
+      <text x="292" y="114" text-anchor="middle" class="t-sub" style="font-size:11px">记忆 · 当前时间</text>
+      <rect x="234" y="128" width="116" height="24" rx="4" fill="var(--gate)" opacity="0.12"/>
+      <text x="292" y="146" text-anchor="middle" class="t-mono t-gate" style="font-size:10px">只当资料，不当指令</text>
+      <!-- arrow -->
+      <line x1="372" y1="110" x2="400" y2="110" class="s-arrow"/>
+      <!-- stage 3: Claude judges -->
+      <rect x="404" y="62" width="120" height="96" rx="36" fill="var(--core)"/>
+      <text x="464" y="104" text-anchor="middle" class="t-label t-inv" style="font-size:14px">Claude 判断</text>
+      <text x="464" y="122" text-anchor="middle" class="t-mono t-inv" style="font-size:10px">选工具 + 给理由</text>
+      <!-- arrow -->
+      <line x1="524" y1="110" x2="552" y2="110" class="s-arrow"/>
+      <!-- stage 4: present tool -->
+      <rect x="556" y="50" width="140" height="120" rx="8" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="1.5"/>
+      <text x="626" y="76" text-anchor="middle" class="t-label" style="font-size:13px">展示型工具</text>
+      <text x="626" y="96" text-anchor="middle" class="t-sub" style="font-size:11px">模型传: product_id</text>
+      <text x="626" y="114" text-anchor="middle" class="t-sub" style="font-size:11px">服务端填: 名称/价格/图</text>
+      <rect x="578" y="128" width="96" height="24" rx="4" fill="var(--shop)" opacity="0.15"/>
+      <text x="626" y="146" text-anchor="middle" class="t-mono t-shop" style="font-size:10px">数据永远准确</text>
+      <!-- arrow -->
+      <line x1="696" y1="110" x2="724" y2="110" class="s-arrow"/>
+      <!-- stage 5: frontend -->
+      <rect x="728" y="62" width="112" height="96" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="784" y="88" text-anchor="middle" class="t-label" style="font-size:13px">前端 UI</text>
+      <rect x="742" y="100" width="30" height="22" rx="3" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <rect x="778" y="100" width="30" height="22" rx="3" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <rect x="742" y="128" width="30" height="22" rx="3" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <rect x="778" y="128" width="30" height="22" rx="3" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+    </svg>
+    <figcaption>prompt_assembly.py 管缓存断点 · fencing.py 管围栏 · enrichment.py 把 ID 填成完整数据</figcaption>
+  </figure>
 </section>
 
-<!-- ════════════════════════════════════════════
-     Section 4: 设计原则
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>设计原则</h2>
-<ul style="font-size:15px;line-height:1.8;padding-left:20px">
-  <li><strong>一个模型拥有对话。</strong>规则按适用频率放入工具描述、提示词或技能。</li>
-  <li><strong>静态提示词和工具列表每轮相同字节。</strong>每请求数据放在缓存断点之后的围栏块中。</li>
-  <li><strong>UI 是展示工具调用。</strong>模型选择组件和 ID，服务端验证并填充实际数据，流式推送为 <code>ui</code> 事件。</li>
-  <li><strong>第三方内容是围栏数据。</strong>写入受来源追踪门和数量上限约束；<code>checkout</code> 不收费；商家写入需人工批准。</li>
-  <li><strong>核心与行业无关。</strong>行业通过 <code>PresentationExtension</code> 添加 UI，其余交给后端实现。</li>
-  <li><strong>每个机制只定义一次。</strong>在 <code>commerce_common</code> 或角色核心中定义，三条路径共享。</li>
-</ul>
-<p class="muted" style="font-size:13px">详细安全规则表见 <code>docs/safety.md</code>，后端映射指南见 <code>docs/backends.md</code>。</p>
+<!-- 4 三条跑道 -->
+<section>
+  <div class="section-head">
+    <h2>同一个核心，三条运行路径</h2>
+  </div>
+  <p class="section-body">提示词、技能、工具定义、执行器只写<strong>一次</strong>，放在 core 里。然后可以放在三种运行方式上跑——谁来驱动对话循环不同，但安全规则和工具行为完全一致。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 300" role="img" aria-label="core 包被三条运行路径共享：Messages API（自己跑循环）、Agent SDK（SDK 跑循环）、Managed Agents（平台跑循环）">
+      <!-- core block top center -->
+      <rect x="230" y="20" width="400" height="100" rx="10" fill="var(--core)" stroke="var(--core-line)" stroke-width="1"/>
+      <text x="430" y="52" text-anchor="middle" class="t-big t-inv" style="font-size:17px">core</text>
+      <text x="430" y="74" text-anchor="middle" class="t-sub t-inv" style="font-size:11px">prompt · skills · tools · gates · executor</text>
+      <text x="430" y="94" text-anchor="middle" class="t-sub t-inv" style="font-size:11px">+ commerce_common（两个角色共用的机制）</text>
+      <!-- three lines down -->
+      <line x1="190" y1="120" x2="190" y2="160" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="430" y1="120" x2="430" y2="160" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="670" y1="120" x2="670" y2="160" stroke="var(--line)" stroke-width="1.5"/>
+      <!-- horizontal connector -->
+      <line x1="190" y1="120" x2="670" y2="120" stroke="var(--line)" stroke-width="1.5"/>
+      <!-- dots at junction -->
+      <circle cx="190" cy="120" r="3" fill="var(--core)"/>
+      <circle cx="430" cy="120" r="3" fill="var(--core)"/>
+      <circle cx="670" cy="120" r="3" fill="var(--core)"/>
+      <!-- Messages API -->
+      <rect x="60" y="164" width="260" height="110" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="190" y="192" text-anchor="middle" class="t-label" style="font-size:14px">Messages API</text>
+      <text x="190" y="212" text-anchor="middle" class="t-mono" style="font-size:11px">runtime-messages-api/</text>
+      <text x="190" y="236" text-anchor="middle" class="t-sub" style="font-size:12px">自己跑循环，最灵活</text>
+      <text x="190" y="256" text-anchor="middle" class="t-sub" style="font-size:12px">示例和 demo 都用这条路径</text>
+      <!-- Agent SDK -->
+      <rect x="340" y="164" width="180" height="110" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="430" y="192" text-anchor="middle" class="t-label" style="font-size:14px">Agent SDK</text>
+      <text x="430" y="212" text-anchor="middle" class="t-mono" style="font-size:11px">runtime-agent-sdk/</text>
+      <text x="430" y="236" text-anchor="middle" class="t-sub" style="font-size:12px">SDK 跑循环</text>
+      <text x="430" y="256" text-anchor="middle" class="t-sub" style="font-size:12px">带命令行控制台</text>
+      <!-- Managed Agents -->
+      <rect x="540" y="164" width="260" height="110" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="670" y="192" text-anchor="middle" class="t-label" style="font-size:14px">Managed Agents</text>
+      <text x="670" y="212" text-anchor="middle" class="t-mono" style="font-size:11px">managed-agents/</text>
+      <text x="670" y="236" text-anchor="middle" class="t-sub" style="font-size:12px">平台托管，走 MCP 服务器</text>
+      <text x="670" y="256" text-anchor="middle" class="t-sub" style="font-size:12px">审批用平台的 always_ask</text>
+    </svg>
+    <figcaption>三条路径注册的是同一份工具定义 · test_consumption_paths.py 验证一致性</figcaption>
+  </figure>
 </section>
 
-<!-- ════════════════════════════════════════════
-     Section 5: 行业示例与入口
-     ════════════════════════════════════════════ -->
-<section class="section">
-<h2>四个行业示例</h2>
-<p>每个示例在 <code>examples/</code> 下，包含 FastAPI 后端 + Next.js 店面和门户。共享代码在 <code>demo_common/</code> 和 <code>web-shared/</code>。</p>
-
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr><th>行业</th><th>品牌</th><th>特色</th></tr>
-  </thead>
-  <tbody>
-    <tr><td><strong>Retail</strong></td><td>ACME</td><td>产品选项（尺码/颜色）、SQL 分析委托、每日简报</td></tr>
-    <tr><td><strong>Travel</strong></td><td>ACME Travel</td><td>日期绑定库存、行程扩展组件、入住日历</td></tr>
-    <tr><td><strong>Telecom</strong></td><td>ACME Mobile</td><td>账户上下文、套餐矩阵、服务端费用披露、受保护的受监管费用</td></tr>
-    <tr><td><strong>Entertainment</strong></td><td>ACME Tickets</td><td>限时保留、候补名单、场馆地图、固定顺序流程</td></tr>
-  </tbody>
-</table>
-</div>
-
-<hr>
-
-<h2>从哪读起</h2>
-<div class="grid-3">
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">理解设计</h3>
-    <ul class="skill-list">
-      <li><span class="skill-name">README.md</span> 项目概览</li>
-      <li><span class="skill-name">docs/safety.md</span> 安全规则</li>
-      <li><span class="skill-name">docs/backends.md</span> 后端映射</li>
-
-    </ul>
+<!-- 5 安全门 -->
+<section>
+  <div class="section-head">
+    <h2>Claude 说了不算，门口有人查</h2>
   </div>
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">运行演示</h3>
-    <ul class="skill-list">
-      <li><span class="skill-name">scripts/run_demo.py</span> 启动行业演示</li>
-      <li><span class="skill-name">examples/retail/</span> 最完整的示例</li>
-    </ul>
+  <p class="section-body">安全规则写在代码里，不靠模型自觉。每个写操作在执行前要过一串检查，全部通过才到你的后端。被拦的调用不中断对话——返回 <code>held</code> 状态，Claude 会自动调整策略。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 260" role="img" aria-label="工具调用依次经过校验、来源检查、上限检查，全部通过才到后端；被拦的返回 held 状态">
+      <!-- Claude -->
+      <rect x="20" y="60" width="100" height="70" rx="30" fill="var(--core)"/>
+      <text x="70" y="100" text-anchor="middle" class="t-label t-inv" style="font-size:14px">Claude</text>
+      <line x1="120" y1="95" x2="158" y2="95" class="s-arrow"/>
+      <text x="140" y="84" text-anchor="middle" class="t-mono" style="font-size:9px">tool_use</text>
+
+      <!-- gate 1: validate -->
+      <rect x="162" y="50" width="130" height="90" rx="8" fill="var(--gate-bg)" stroke="var(--gate)" stroke-width="1.5"/>
+      <text x="227" y="78" text-anchor="middle" class="t-label t-gate" style="font-size:13px">① 校验</text>
+      <text x="227" y="98" text-anchor="middle" class="t-sub" style="font-size:11px">参数格式对吗</text>
+      <text x="227" y="114" text-anchor="middle" class="t-sub" style="font-size:11px">工具名在列表里吗</text>
+      <line x1="292" y1="95" x2="318" y2="95" class="s-arrow"/>
+
+      <!-- gate 2: provenance -->
+      <rect x="322" y="50" width="130" height="90" rx="8" fill="var(--gate-bg)" stroke="var(--gate)" stroke-width="1.5"/>
+      <text x="387" y="78" text-anchor="middle" class="t-label t-gate" style="font-size:13px">② 来源</text>
+      <text x="387" y="98" text-anchor="middle" class="t-sub" style="font-size:11px">这个 ID 本会话</text>
+      <text x="387" y="114" text-anchor="middle" class="t-sub" style="font-size:11px">搜索结果里见过吗</text>
+      <line x1="452" y1="95" x2="478" y2="95" class="s-arrow"/>
+
+      <!-- gate 3: limits -->
+      <rect x="482" y="50" width="130" height="90" rx="8" fill="var(--gate-bg)" stroke="var(--gate)" stroke-width="1.5"/>
+      <text x="547" y="78" text-anchor="middle" class="t-label t-gate" style="font-size:13px">③ 上限</text>
+      <text x="547" y="98" text-anchor="middle" class="t-sub" style="font-size:11px">数量 · 价格变幅</text>
+      <text x="547" y="114" text-anchor="middle" class="t-sub" style="font-size:11px">促销深度 · 预算</text>
+      <line x1="612" y1="95" x2="648" y2="95" class="s-arrow"/>
+      <text x="630" y="84" text-anchor="middle" class="t-mono" style="font-size:9px">全部通过</text>
+
+      <!-- your backend -->
+      <rect x="652" y="55" width="180" height="80" rx="8" fill="var(--merch-bg)" stroke="var(--merch-line)" stroke-width="1.5"/>
+      <text x="742" y="86" text-anchor="middle" class="t-label" style="font-size:14px">你的后端</text>
+      <text x="742" y="108" text-anchor="middle" class="t-sub" style="font-size:12px">执行真正的业务操作</text>
+
+      <!-- blocked path -->
+      <line x1="387" y1="140" x2="387" y2="176" stroke="var(--gate)" stroke-width="1.4" marker-end="url(#ah-gate)"/>
+      <rect x="252" y="180" width="270" height="56" rx="8" fill="var(--paper)" stroke="var(--gate-line)" stroke-width="1"/>
+      <text x="387" y="202" text-anchor="middle" class="t-label t-gate" style="font-size:12px">被拦 → 返回 held</text>
+      <text x="387" y="222" text-anchor="middle" class="t-sub" style="font-size:11px">告诉 Claude 原因和恢复方式，对话继续</text>
+
+      <!-- file label -->
+      <text x="387" y="40" text-anchor="middle" class="t-mono" style="font-size:10px">gates.py · changes.py · fencing.py</text>
+    </svg>
+    <figcaption>商家侧额外多一层：暂存 → 预览 → 店员在 UI 上点审批 → 才应用（聊天里说「批准」不算）</figcaption>
+  </figure>
+</section>
+
+<!-- 6 后端接口 -->
+<section>
+  <div class="section-head">
+    <h2>你只需要接两个接口</h2>
   </div>
-  <div class="card">
-    <h3 class="mt-0" style="font-size:1rem">接入自己的系统</h3>
-    <ul class="skill-list">
-      <li><span class="skill-name">StorefrontBackend</span> 购物后端 ABC</li>
-      <li><span class="skill-name">MerchantBackend</span> 商家后端 ABC</li>
-      <li><span class="skill-name">plugins/</span> 插件脚手架</li>
-    </ul>
+  <p class="section-body">核心不认识你的数据库。它只认两个抽象类——<code>StorefrontBackend</code>（11 个方法）和 <code>MerchantBackend</code>（13 个方法）。你把自己的系统包成它们的实现，其余不用动。<code>examples/</code> 里四个行业就是四种写法。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 240" role="img" aria-label="核心通过 StorefrontBackend 和 MerchantBackend 两个接口连接你的系统">
+      <!-- core block -->
+      <rect x="20" y="30" width="320" height="180" rx="10" fill="var(--core)" stroke="var(--core-line)" stroke-width="1"/>
+      <text x="180" y="64" text-anchor="middle" class="t-big t-inv" style="font-size:16px">核心</text>
+      <text x="180" y="88" text-anchor="middle" class="t-sub t-inv" style="font-size:11px">不认识你的数据库</text>
+      <!-- interface labels inside core -->
+      <rect x="42" y="106" width="276" height="30" rx="4" fill="var(--bg)" opacity="0.2"/>
+      <text x="180" y="126" text-anchor="middle" class="t-mono t-inv" style="font-size:11px">StorefrontBackend（11 个方法）</text>
+      <rect x="42" y="144" width="276" height="30" rx="4" fill="var(--bg)" opacity="0.2"/>
+      <text x="180" y="164" text-anchor="middle" class="t-mono t-inv" style="font-size:11px">MerchantBackend（13 个方法）</text>
+      <!-- connector -->
+      <line x1="340" y1="120" x2="400" y2="120" class="s-arrow"/>
+      <text x="370" y="110" text-anchor="middle" class="t-mono" style="font-size:9px">实现</text>
+      <!-- your systems -->
+      <rect x="404" y="20" width="436" height="200" rx="10" fill="var(--merch-bg)" stroke="var(--merch-line)" stroke-width="1"/>
+      <text x="622" y="48" text-anchor="middle" class="t-label t-merch" style="font-size:15px">你的系统</text>
+      <rect x="424" y="64" width="126" height="42" rx="6" fill="var(--paper)"/><text x="487" y="90" text-anchor="middle" class="t-sub" style="font-size:12px">商品目录</text>
+      <rect x="560" y="64" width="126" height="42" rx="6" fill="var(--paper)"/><text x="623" y="90" text-anchor="middle" class="t-sub" style="font-size:12px">购物车 / 订单</text>
+      <rect x="696" y="64" width="126" height="42" rx="6" fill="var(--paper)"/><text x="759" y="90" text-anchor="middle" class="t-sub" style="font-size:12px">政策 / 条款</text>
+      <rect x="424" y="118" width="126" height="42" rx="6" fill="var(--paper)"/><text x="487" y="144" text-anchor="middle" class="t-sub" style="font-size:12px">分析 / 库存</text>
+      <rect x="560" y="118" width="126" height="42" rx="6" fill="var(--paper)"/><text x="623" y="144" text-anchor="middle" class="t-sub" style="font-size:12px">定价 / 促销</text>
+      <rect x="696" y="118" width="126" height="42" rx="6" fill="var(--paper)"/><text x="759" y="144" text-anchor="middle" class="t-sub" style="font-size:12px">营销活动</text>
+      <text x="622" y="190" text-anchor="middle" class="t-mono" style="font-size:10px">examples/*/api/ 里有四种实现可以参考</text>
+    </svg>
+    <figcaption>docs/backends.md 是六步接入指南 · PresentationExtension 加行业特有的 UI 组件</figcaption>
+  </figure>
+</section>
+
+<!-- 7 仓库地图 -->
+<section>
+  <div class="section-head">
+    <h2>仓库地图</h2>
   </div>
-</div>
+  <p class="section-body">三层结构：底层是两个角色<strong>共用的机制</strong>，中间是<strong>两个角色</strong>各自的 core + skills + 三条运行路径，顶层是<strong>四个能跑的行业示例</strong>。旁边有一个 Claude Code 插件。</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 410" role="img" aria-label="仓库三层结构：examples 在上，shopping-agent 和 merchant-agent 在中，commerce-common 在下">
+      <!-- layer 3: examples -->
+      <rect x="20" y="16" width="640" height="110" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="40" y="38" class="t-mono" style="font-size:12px">examples/</text>
+      <text x="340" y="38" text-anchor="middle" class="t-sub" style="font-size:11px">四个行业 = API + 数据 + 顾客网页 + 店员网页</text>
+      <rect x="36" y="50" width="144" height="60" rx="6" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <text x="108" y="72" text-anchor="middle" class="t-label" style="font-size:12px">retail 零售</text>
+      <text x="108" y="92" text-anchor="middle" class="t-mono" style="font-size:10px">:8000 :3000 :3100</text>
+      <rect x="190" y="50" width="144" height="60" rx="6" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <text x="262" y="72" text-anchor="middle" class="t-label" style="font-size:12px">travel 旅行</text>
+      <text x="262" y="92" text-anchor="middle" class="t-mono" style="font-size:10px">:8001 :3001 :3101</text>
+      <rect x="344" y="50" width="144" height="60" rx="6" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <text x="416" y="72" text-anchor="middle" class="t-label" style="font-size:12px">telecom 电信</text>
+      <text x="416" y="92" text-anchor="middle" class="t-mono" style="font-size:10px">:8002 :3002 :3102</text>
+      <rect x="498" y="50" width="148" height="60" rx="6" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="0.8"/>
+      <text x="572" y="72" text-anchor="middle" class="t-label" style="font-size:12px">entertainment 票务</text>
+      <text x="572" y="92" text-anchor="middle" class="t-mono" style="font-size:10px">:8003 :3003 :3103</text>
+      <!-- plugin side -->
+      <rect x="680" y="16" width="160" height="110" rx="8" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="760" y="38" text-anchor="middle" class="t-mono" style="font-size:12px">plugins/</text>
+      <text x="760" y="62" text-anchor="middle" class="t-label" style="font-size:13px">commerce-builder</text>
+      <text x="760" y="82" text-anchor="middle" class="t-sub" style="font-size:11px">Claude Code 插件</text>
+      <text x="760" y="100" text-anchor="middle" class="t-sub" style="font-size:11px">照范本帮你搭一个</text>
+
+      <!-- connector lines: examples → roles -->
+      <line x1="340" y1="126" x2="340" y2="150" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="210" y1="150" x2="640" y2="150" stroke="var(--line)" stroke-width="1.2"/>
+      <line x1="210" y1="150" x2="210" y2="162" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="640" y1="150" x2="640" y2="162" stroke="var(--line)" stroke-width="1.5"/>
+
+      <!-- layer 2: two roles -->
+      <rect x="20" y="164" width="400" height="140" rx="8" fill="var(--shop-bg)" stroke="var(--shop-line)" stroke-width="1"/>
+      <text x="40" y="186" class="t-mono" style="font-size:12px">shopping-agent/</text>
+      <rect x="36" y="198" width="368" height="28" rx="4" fill="var(--paper)"/>
+      <text x="48" y="218" class="t-mono" style="font-size:11px">core/</text>
+      <text x="180" y="218" class="t-sub" style="font-size:11px">类型 · 接口 · 提示词 · 工具 · 门控 · 执行器</text>
+      <rect x="36" y="232" width="368" height="28" rx="4" fill="var(--paper)"/>
+      <text x="48" y="252" class="t-mono" style="font-size:11px">skills/</text>
+      <text x="180" y="252" class="t-sub" style="font-size:11px">5 个流程，每个一份 SKILL.md</text>
+      <rect x="36" y="266" width="368" height="28" rx="4" fill="var(--paper)"/>
+      <text x="48" y="286" class="t-mono" style="font-size:11px">runtime-* / managed-agents/</text>
+      <text x="306" y="286" class="t-sub" style="font-size:11px">三条路径</text>
+
+      <rect x="440" y="164" width="400" height="140" rx="8" fill="var(--merch-bg)" stroke="var(--merch-line)" stroke-width="1"/>
+      <text x="460" y="186" class="t-mono" style="font-size:12px">merchant-agent/</text>
+      <rect x="456" y="198" width="368" height="28" rx="4" fill="var(--paper)"/>
+      <text x="468" y="218" class="t-mono" style="font-size:11px">core/</text>
+      <text x="610" y="218" class="t-sub" style="font-size:11px">同上 + changes.py + analysis.py</text>
+      <rect x="456" y="232" width="368" height="28" rx="4" fill="var(--paper)"/>
+      <text x="468" y="252" class="t-mono" style="font-size:11px">skills/</text>
+      <text x="610" y="252" class="t-sub" style="font-size:11px">5 个流程，每个一份 SKILL.md</text>
+      <rect x="456" y="266" width="368" height="28" rx="4" fill="var(--paper)"/>
+      <text x="468" y="286" class="t-mono" style="font-size:11px">runtime-* / managed-agents/</text>
+      <text x="726" y="286" class="t-sub" style="font-size:11px">三条路径</text>
+
+      <!-- connector lines: roles → common -->
+      <line x1="220" y1="304" x2="220" y2="330" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="640" y1="304" x2="640" y2="330" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="220" y1="330" x2="640" y2="330" stroke="var(--line)" stroke-width="1.2"/>
+      <line x1="430" y1="330" x2="430" y2="346" stroke="var(--line)" stroke-width="1.5"/>
+
+      <!-- layer 1: common -->
+      <rect x="20" y="348" width="820" height="52" rx="8" fill="var(--core)" stroke="var(--core-line)" stroke-width="1"/>
+      <text x="40" y="372" class="t-mono t-inv" style="font-size:12px">commerce-common/</text>
+      <text x="40" y="390" class="t-sub t-inv" style="font-size:11px">共用：配置 · 围栏 · 记忆 · 技能 · 缓存拼装 · 数据锚定 · UI 组件 · 执行器基类 · 事件流 · 委托</text>
+    </svg>
+    <figcaption>每个包有 pyproject.toml · 共享 requirements.txt · scripts/check.py 验证跨包一致性</figcaption>
+  </figure>
+</section>
+
+<!-- 8 阅读顺序 -->
+<section style="border-bottom:none">
+  <div class="section-head">
+    <h2>想深入，按这个顺序读</h2>
+  </div>
+  <div class="readmap">
+    <div><div class="k">1 · README.md</div><div class="v">两个角色、三条路径、怎么把 demo 跑起来。</div></div>
+    <div><div class="k">2 · docs/safety.md</div><div class="v">每条安全规则在哪个模块执行。理解这个仓库的价值观。</div></div>
+    <div><div class="k">3 · shopping-agent/core/</div><div class="v">先看 <code>backend.py</code>（接口）、<code>tools/registry.py</code>（工具）、<code>gates.py</code>（门控）。</div></div>
+    <div><div class="k">4 · orchestrator.py</div><div class="v">一轮对话的完整循环。文件头 docstring 就是概要。</div></div>
+    <div><div class="k">5 · examples/retail/api/</div><div class="v">最简单的后端实现，看接口怎么被具体实现的。</div></div>
+    <div><div class="k">6 · docs/backends.md</div><div class="v">轮到你接自己的系统时看。六步接入指南。</div></div>
+  </div>
 </section>
 </main>
-
-<!-- 页脚 -->
-<footer class="footer">
-  <div class="wrap">
-    Copyright 2026 Anthropic PBC · Apache License 2.0 · 示例中的公司和品牌均为虚构（唯一公司为 ACME）
-  </div>
-</footer>
-
-<script>
-(function() {
-  var btn = document.getElementById('themeToggle');
-  var sun = document.getElementById('iconSun');
-  var moon = document.getElementById('iconMoon');
-  // states: null (system), 'light', 'dark'
-  var state = null;
-  try { state = localStorage.getItem('theme'); } catch(e) {}
-  if (state === 'light' || state === 'dark') {
-    document.documentElement.setAttribute('data-theme', state);
-  }
-  function updateIcon() {
-    var isDark;
-    if (state === 'dark') isDark = true;
-    else if (state === 'light') isDark = false;
-    else isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    sun.style.display = isDark ? 'none' : 'block';
-    moon.style.display = isDark ? 'block' : 'none';
-  }
-  updateIcon();
-  btn.addEventListener('click', function() {
-    if (!state) state = 'dark';
-    else if (state === 'dark') state = 'light';
-    else state = null;
-    if (state) {
-      document.documentElement.setAttribute('data-theme', state);
-      try { localStorage.setItem('theme', state); } catch(e) {}
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      try { localStorage.removeItem('theme'); } catch(e) {}
-    }
-    updateIcon();
-  });
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateIcon);
-})();
-</script>
-</body>
-</html>
+</body></html>
