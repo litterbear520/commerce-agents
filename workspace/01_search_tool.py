@@ -24,7 +24,7 @@ search_products_schema = {
     "name": "search_products",
     "description": (
         "搜索商品目录，返回商品的 id、标题、价格、评分和库存状态。"
-        "用具体的关键词搜索，把顾客明确说的筛选条件放在 filters 里。"
+        "用具体的关键词搜索。"
         "顾客提到多个不同商品时，每个商品单独搜一次。"
     ),
     "input_schema": {
@@ -64,7 +64,7 @@ TOOL_MAP = {
 messages: list = []
 
 while True:
-    user_input = input("你: ")
+    user_input = input(">>")
     if not user_input:
         break
     messages.append({"role": "user", "content": user_input})
@@ -75,7 +75,7 @@ while True:
             model=model,
             system=system,
             max_tokens=1000,
-            tools=[search_products_schema],
+            tools=[search_products_schema],  # type: ignore[list-item]
             messages=messages,
         )
         messages.append({"role": "assistant", "content": response.content})
@@ -83,7 +83,7 @@ while True:
         # 先打印模型说的话（工具调用前可能带一句文字）
         for block in response.content:
             if block.type == "text":
-                print(f"助手: {block.text}")
+                print(f"AI: {block.text}")
 
         # 不是工具调用 → 这轮结束，回到等用户输入
         if response.stop_reason != "tool_use":
@@ -93,10 +93,10 @@ while True:
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
-                print(f"  [调用工具] {block.name}({block.input})")
-                fn = TOOL_MAP[block.name]
-                output = fn(**block.input)
-                print(f"  [工具结果] {output}")
+                print(f"[调用工具] {block.name}({block.input})")
+                run = TOOL_MAP[block.name]
+                output = run(**block.input)  # type: ignore[arg-type]
+                print(f"[工具结果] {output}")
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": block.id,
