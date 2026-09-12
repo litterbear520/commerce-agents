@@ -3,14 +3,7 @@
 从 s03_provenance_gate 导入被测函数，不调用任何外部 API。
 后续步骤加的门控（注入防护、变体检查、数量上限）也往这里加。
 """
-import sys
-from pathlib import Path
-
-# 把 workspace/ 加入 Python 路径，这样才能 import s03_provenance_gate
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 from s03_provenance_gate import (
-    ToolOutcome,
     check_provenance,
     seen_products,
     cart,
@@ -24,7 +17,6 @@ from s03_provenance_gate import (
 
 def test_unseen_id_is_held():
     """没见过的 ID 被 provenance 门控拦截。"""
-    seen_products.clear()
     result = check_provenance("XYZ-999")
     assert result is not None
     assert result.blocked == "provenance"
@@ -32,7 +24,6 @@ def test_unseen_id_is_held():
 
 def test_seen_id_passes():
     """见过的 ID 放行（返回 None）。"""
-    seen_products.clear()
     seen_products["AR-1105"] = {"id": "AR-1105", "title": "ACME Select 主动降噪耳机"}
     result = check_provenance("AR-1105")
     assert result is None
@@ -40,7 +31,6 @@ def test_seen_id_passes():
 
 def test_held_text_contains_recovery_hint():
     """拦截结果的文本里包含恢复提示，告诉模型怎么做。"""
-    seen_products.clear()
     result = check_provenance("XYZ-999")
     assert result is not None
     assert "get_product_details" in result.text
@@ -51,17 +41,13 @@ def test_held_text_contains_recovery_hint():
 
 def test_add_to_cart_requires_provenance():
     """add_to_cart 对没见过的 ID 返回 held，不是 error。"""
-    seen_products.clear()
-    cart.clear()
     result = add_to_cart("XYZ-999")
     assert result.blocked == "provenance"
-    assert len(cart) == 0  # 购物车没有变化
+    assert len(cart) == 0
 
 
 def test_add_to_cart_allows_seen_id():
     """add_to_cart 对见过的、有库存的 ID 正常执行。"""
-    seen_products.clear()
-    cart.clear()
     remember_products([{"id": "AR-1104", "title": "ACME Select 矮轴机械键盘",
                         "price": 99.0, "rating": 4.6, "in_stock": True,
                         "description": "..."}])
@@ -74,8 +60,6 @@ def test_add_to_cart_allows_seen_id():
 
 def test_add_to_cart_rejects_out_of_stock():
     """add_to_cart 对见过但缺货的商品返回 error。"""
-    seen_products.clear()
-    cart.clear()
     remember_products([{"id": "AR-1002", "title": "ACME Signature 15Bar 意式咖啡机（带蒸汽棒）",
                         "price": 329.0, "rating": 4.7, "in_stock": False,
                         "description": "..."}])
@@ -89,7 +73,5 @@ def test_add_to_cart_rejects_out_of_stock():
 
 def test_update_cart_item_requires_provenance():
     """update_cart_item 对没见过的 ID 同样被拦截。"""
-    seen_products.clear()
-    cart.clear()
     result = update_cart_item("XYZ-999", 3)
     assert result.blocked == "provenance"
