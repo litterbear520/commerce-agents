@@ -1,13 +1,4 @@
 import json
-from dotenv import load_dotenv
-
-load_dotenv()
-
-from anthropic import Anthropic
-
-client = Anthropic(base_url="https://api.deepseek.com/anthropic")
-model = "deepseek-v4-flash"
-system = "你是一个 ACME 购物助手。"
 
 # ── 假商品列表（来自 EVALS.md 的 6 个商品）──────────────────────────
 PRODUCTS = [
@@ -25,9 +16,57 @@ PRODUCTS = [
      "description": "Queen 尺寸 150×200cm，玻璃微珠填充，透气棉面料，可机洗。"},
 ]
 
-# ── 购物车状态 ──────────────────────────────────────────────────────
-# 项目中对应 types.py 的 CartItem / Cart
+# ── 会话状态 ────────────────────────────────────────────────────────
+# 项目中对应 types.py 的 ShoppingSessionState
 cart: list[dict] = []
+seen_products: dict[str, dict] = {}  # 记录本次会话中工具返回过的商品
+
+
+# ── ToolOutcome ─────────────────────────────────────────────────────
+# 项目中对应 commerce_common/streaming.py 的 ToolOutcome
+class ToolOutcome:
+    """工具调用结果：区分成功、错误、被拦截三种状态。"""
+    def __init__(self, text: str, is_error: bool = False, blocked: str | None = None):
+        self.text = text
+        self.is_error = is_error
+        self.blocked = blocked
+
+    @classmethod
+    def ok(cls, data: dict | list) -> "ToolOutcome":
+        return cls(json.dumps(data, ensure_ascii=False))
+
+    @classmethod
+    def error(cls, text: str) -> "ToolOutcome":
+        return cls(text, is_error=True)
+
+    @classmethod
+    def held(cls, gate: str, text: str) -> "ToolOutcome":
+        """操作被搁置（held），不是错误，模型可以按提示恢复。"""
+        return cls(text, blocked=gate)
+
+
+# ── 门控检查 ────────────────────────────────────────────────────────
+# 项目中对应 shopping-agent/core/shopping_agent/gates.py
+PROVENANCE_GATE = "provenance"
+
+
+def check_provenance(product_id: str) -> ToolOutcome | None:
+    """检查 product_id 是否在本次会话中被工具返回过。没见过则拦截。"""
+    if product_id in seen_products:
+        return None
+    return ToolOutcome.held(
+        PROVENANCE_GATE,
+        f"product_id {product_id} 没有在本次会话的搜索或详情结果中出现过。"
+        "请先调用 get_product_details 查询该 ID，或通过 search_products 搜索，"
+        "然后用搜索结果中返回的 product_id 加入购物车。"
+    )
+
+
+# ── 记录已见商品 ────────────────────────────────────────────────────
+def remember_products(products: list[dict]) -> None:
+    """把工具返回的商品记入 seen_products。"""
+    for p in products:
+        seen_products[p["id"]] = p
 
 
 # ── 工具 Schema ─────────────────────────────────────────────────────
@@ -159,65 +198,71 @@ tools = [
 
 # ── 工具函数 ────────────────────────────────────────────────────────
 
-def search_products(query: str, limit: int = 5) -> str:
-    """在假商品列表里做简单的关键词匹配，返回 JSON 字符串。"""
+def search_products(query: str, limit: int = 5) -> ToolOutcome:
+    """在假商品列表里做简单的关键词匹配。"""
     query_lower = query.lower()
     results = [p for p in PRODUCTS if query_lower in p["title"].lower()]
     results = results[:limit]
-    return json.dumps(results, ensure_ascii=False)
+    remember_products(results)
+    return ToolOutcome.ok(results)
 
 
-def get_product_details(product_id: str) -> str:
+def get_product_details(product_id: str) -> ToolOutcome:
     """按 product_id 查找商品，返回完整信息。"""
     for p in PRODUCTS:
         if p["id"] == product_id:
-            return json.dumps(p, ensure_ascii=False)
-    return json.dumps({"error": f"没有找到商品 {product_id}"}, ensure_ascii=False)
+            remember_products([p])
+            return ToolOutcome.ok(p)
+    return ToolOutcome.error(f"没有找到商品 {product_id}")
 
 
-def get_cart() -> str:
+def get_cart() -> ToolOutcome:
     """返回当前购物车内容和小计。"""
     subtotal = sum(item["price"] * item["quantity"] for item in cart)
-    return json.dumps({"items": cart, "subtotal": subtotal}, ensure_ascii=False)
+    return ToolOutcome.ok({"items": cart, "subtotal": subtotal})
 
 
-def add_to_cart(product_id: str, quantity: int = 1) -> str:
-    """把商品加入购物车。如果缺货则拒绝。"""
-    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
-    if product is None:
-        return json.dumps({"error": f"商品 {product_id} 不存在"}, ensure_ascii=False)
+def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
+    """把商品加入购物车。门控：来源检查 + 库存检查。"""
+    # 门控：来源检查
+    if held := check_provenance(product_id):
+        return held
+    product = seen_products[product_id]
+    # 库存检查
     if not product["in_stock"]:
-        return json.dumps({"error": f"商品 {product['title']} 目前缺货"}, ensure_ascii=False)
+        return ToolOutcome.error(f"商品 {product['title']} 目前缺货")
     # 如果购物车里已有，增加数量
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] += quantity
-            return json.dumps({"ok": True, "product_id": product_id,
-                               "title": product["title"], "quantity": item["quantity"]}, ensure_ascii=False)
+            return ToolOutcome.ok({"ok": True, "product_id": product_id,
+                                   "title": product["title"], "quantity": item["quantity"]})
     # 新增一行
     cart.append({"product_id": product_id, "title": product["title"],
                  "price": product["price"], "quantity": quantity})
-    return json.dumps({"ok": True, "product_id": product_id,
-                       "title": product["title"], "quantity": quantity}, ensure_ascii=False)
+    return ToolOutcome.ok({"ok": True, "product_id": product_id,
+                           "title": product["title"], "quantity": quantity})
 
 
-def update_cart_item(product_id: str, quantity: int) -> str:
-    """修改购物车中已有商品的数量。"""
+def update_cart_item(product_id: str, quantity: int) -> ToolOutcome:
+    """修改购物车中已有商品的数量。门控：来源检查。"""
+    if held := check_provenance(product_id):
+        return held
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] = quantity
-            return json.dumps({"ok": True, "product_id": product_id,
-                               "quantity": quantity}, ensure_ascii=False)
-    return json.dumps({"error": f"购物车中没有商品 {product_id}"}, ensure_ascii=False)
+            return ToolOutcome.ok({"ok": True, "product_id": product_id,
+                                   "quantity": quantity})
+    return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 
-def remove_from_cart(product_id: str) -> str:
+def remove_from_cart(product_id: str) -> ToolOutcome:
     """从购物车中移除商品。"""
     for i, item in enumerate(cart):
         if item["product_id"] == product_id:
             removed = cart.pop(i)
-            return json.dumps({"ok": True, "removed": removed["title"]}, ensure_ascii=False)
-    return json.dumps({"error": f"购物车中没有商品 {product_id}"}, ensure_ascii=False)
+            return ToolOutcome.ok({"ok": True, "removed": removed["title"]})
+    return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 
 # ── 工具调用分发 ────────────────────────────────────────────────────
@@ -232,41 +277,55 @@ TOOL_MAP = {
 
 
 # ── 对话循环 ────────────────────────────────────────────────────────
-messages: list = []
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+    from anthropic import Anthropic
 
-while True:
-    user_input = input(">>")
-    if not user_input:
-        break
-    messages.append({"role": "user", "content": user_input})
+    client = Anthropic(base_url="https://api.deepseek.com/anthropic")
+    model = "deepseek-v4-flash"
+    system = "你是一个 ACME 购物助手。"
+    messages: list = []
 
     while True:
-        response = client.messages.create(
-            model=model,
-            system=system,
-            max_tokens=1000,
-            tools=tools,  # type: ignore[list-item]
-            messages=messages,
-        )
-        messages.append({"role": "assistant", "content": response.content})
-
-        for block in response.content:
-            if block.type == "text":
-                print(f"AI: {block.text}")
-
-        if response.stop_reason != "tool_use":
+        user_input = input(">>")
+        if not user_input:
             break
+        messages.append({"role": "user", "content": user_input})
 
-        tool_results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                print(f"[调用工具] {block.name}({block.input})")
-                run = TOOL_MAP[block.name]
-                output = run(**block.input)  # type: ignore[arg-type]
-                print(f"[工具结果] {output}")
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": tool_results})
+        while True:
+            response = client.messages.create(
+                model=model,
+                system=system,
+                max_tokens=1000,
+                tools=tools,  # type: ignore[list-item]
+                messages=messages,
+            )
+            messages.append({"role": "assistant", "content": response.content})
+
+            for block in response.content:
+                if block.type == "text":
+                    print(f"AI: {block.text}")
+
+            if response.stop_reason != "tool_use":
+                break
+
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    print(f"[调用工具] {block.name}({block.input})")
+                    run = TOOL_MAP[block.name]
+                    outcome = run(**block.input)  # type: ignore[arg-type]
+                    if outcome.blocked:
+                        print(f"[已拦截] gate={outcome.blocked}: {outcome.text}")
+                    elif outcome.is_error:
+                        print(f"[错误] {outcome.text}")
+                    else:
+                        print(f"[工具结果] {outcome.text}")
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": outcome.text,
+                        "is_error": outcome.is_error,
+                    })
+            messages.append({"role": "user", "content": tool_results})

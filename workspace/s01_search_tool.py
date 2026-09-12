@@ -61,41 +61,42 @@ TOOL_MAP = {
 
 
 # ── 对话循环 ────────────────────────────────────────────────────────
-messages: list = []
-
-while True:
-    user_input = input(">>")
-    if not user_input:
-        break
-    messages.append({"role": "user", "content": user_input})
+if __name__ == "__main__":
+    messages: list = []
 
     while True:
-        response = client.messages.create(
-            model=model,
-            system=system,
-            max_tokens=1000,
-            tools=[search_products_schema],  # type: ignore[list-item]
-            messages=messages,
-        )
-        messages.append({"role": "assistant", "content": response.content})
-
-        for block in response.content:
-            if block.type == "text":
-                print(f"AI: {block.text}")
-
-        if response.stop_reason != "tool_use":
+        user_input = input(">>")
+        if not user_input:
             break
+        messages.append({"role": "user", "content": user_input})
 
-        tool_results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                print(f"[调用工具] {block.name}({block.input})")
-                run = TOOL_MAP[block.name]
-                output = run(**block.input)  # type: ignore[arg-type]
-                print(f"[工具结果] {output}")
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": tool_results})
+        while True:
+            response = client.messages.create(
+                model=model,
+                system=system,
+                max_tokens=1000,
+                tools=[search_products_schema],  # type: ignore[list-item]
+                messages=messages,
+            )
+            messages.append({"role": "assistant", "content": response.content})
+
+            for block in response.content:
+                if block.type == "text":
+                    print(f"AI: {block.text}")
+
+            if response.stop_reason != "tool_use":
+                break
+
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    print(f"[调用工具] {block.name}({block.input})")
+                    run = TOOL_MAP[block.name]
+                    output = run(**block.input)  # type: ignore[arg-type]
+                    print(f"[工具结果] {output}")
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": output,
+                    })
+            messages.append({"role": "user", "content": tool_results})
