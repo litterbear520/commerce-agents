@@ -11,32 +11,32 @@ system = "你是一个 ACME 购物助手。"
 
 # ── 假商品列表（来自 EVALS.md 的 6 个商品）──────────────────────────
 PRODUCTS = [
-    {"id": "AR-1104", "title": "ACME Select Low-Profile Mechanical Keyboard", "price": 99.0, "rating": 4.6, "in_stock": True},
-    {"id": "AR-1105", "title": "ACME Select Noise-Cancelling Headphones", "price": 249.0, "rating": 4.8, "in_stock": True},
-    {"id": "AR-1106", "title": "ACME Select 1080p Webcam with Auto-Framing", "price": 69.0, "rating": 4.3, "in_stock": True},
-    {"id": "AR-1107", "title": "ACME Studio Adjustable Aluminum Laptop Stand", "price": 39.0, "rating": 4.5, "in_stock": True},
-    {"id": "AR-1002", "title": "ACME Signature 15-Bar Espresso Machine with Steam Wand", "price": 329.0, "rating": 4.7, "in_stock": False},
-    {"id": "AR-1008", "title": "ACME Rest Weighted Blanket, Queen", "price": 49.0, "rating": 4.4, "in_stock": True},
+    {"id": "AR-1104", "title": "ACME Select 矮轴机械键盘", "price": 99.0, "rating": 4.6, "in_stock": True},
+    {"id": "AR-1105", "title": "ACME Select 主动降噪耳机", "price": 249.0, "rating": 4.8, "in_stock": True},
+    {"id": "AR-1106", "title": "ACME Select 1080p 自动取景摄像头", "price": 69.0, "rating": 4.3, "in_stock": True},
+    {"id": "AR-1107", "title": "ACME Studio 可调节铝合金笔记本支架", "price": 39.0, "rating": 4.5, "in_stock": True},
+    {"id": "AR-1002", "title": "ACME Signature 15Bar 意式咖啡机（带蒸汽棒）", "price": 329.0, "rating": 4.7, "in_stock": False},
+    {"id": "AR-1008", "title": "ACME Rest 加重毯 Queen 尺寸", "price": 49.0, "rating": 4.4, "in_stock": True},
 ]
 
 # ── 工具 Schema ─────────────────────────────────────────────────────
 search_products_schema = {
     "name": "search_products",
     "description": (
-        "Search the catalog; returns products with id, title, brand, price, rating, "
-        "and availability. Use a specific query and put stated constraints in filters. "
-        "Run one search per distinct item a request names."
+        "搜索商品目录，返回商品的 id、标题、价格、评分和库存状态。"
+        "用具体的关键词搜索，把顾客明确说的筛选条件放在 filters 里。"
+        "顾客提到多个不同商品时，每个商品单独搜一次。"
     ),
     "input_schema": {
         "type": "object",
         "properties": {
             "query": {
                 "type": "string",
-                "description": "What to look for, in the catalog's vocabulary.",
+                "description": "要搜索的关键词。",
             },
             "limit": {
                 "type": "integer",
-                "description": "Maximum results to return.",
+                "description": "最多返回几条结果。",
             },
         },
         "required": ["query"],
