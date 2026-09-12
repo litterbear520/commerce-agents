@@ -224,10 +224,10 @@ def remove_from_cart(product_id: str) -> str:
 TOOL_MAP = {
     "search_products": search_products,
     "get_product_details": get_product_details,
-    "get_cart": get_cart,
-    "add_to_cart": add_to_cart,
-    "update_cart_item": update_cart_item,
-    "remove_from_cart": remove_from_cart,
+    "get_cart": get_cart,                       # get
+    "add_to_cart": add_to_cart,                 # post
+    "update_cart_item": update_cart_item,       # put
+    "remove_from_cart": remove_from_cart,       # delete
 }
 
 
@@ -240,7 +240,6 @@ while True:
         break
     messages.append({"role": "user", "content": user_input})
 
-    # 内层循环：处理工具调用，可能连续调多次
     while True:
         response = client.messages.create(
             model=model,
@@ -251,16 +250,13 @@ while True:
         )
         messages.append({"role": "assistant", "content": response.content})
 
-        # 先打印模型说的话（工具调用前可能带一句文字）
         for block in response.content:
             if block.type == "text":
                 print(f"AI: {block.text}")
 
-        # 不是工具调用 → 这轮结束，回到等用户输入
         if response.stop_reason != "tool_use":
             break
 
-        # 是工具调用 → 执行工具，把结果追加回 messages，继续内层循环
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
