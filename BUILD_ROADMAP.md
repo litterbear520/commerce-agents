@@ -136,12 +136,12 @@ Stage C 之后再加多次运行取均值、模型裁判、以及不同模型配
 
 **做什么**：
 
-- [ ] 引入 `seen_products: dict[str, Product]` — 记录本次会话中搜索和详情工具实际返回过的商品
-- [ ] 在 `add_to_cart` / `update_cart_item` 执行前检查：product_id 是否在 `seen_products` 里？
-- [ ] 如果不在，不执行操作，返回一个「held（已拦截）」结果，告诉模型「这个 ID 没有在本次会话的搜索结果中出现，请先搜索」
-- [ ] 引入 `ToolOutcome` 数据类：区分成功、错误、和「被拦截」三种结果
-- [ ] 写 `test_gates.py` 的第一批用例：没见过的 ID 被拦截、见过的 ID 放行、拦截结果的文本告诉模型怎么恢复。门控逻辑是确定性的行为约束，写完就应该立刻用测试锁住
-- [ ] 在 `EVALS.md` 里启用第 9 行（gate-001-hallucinated-id）：输入一个不存在的 ID，期望最终购物车为空且模型改为搜索
+- [x] 引入 `seen_products: dict[str, Product]` — 记录本次会话中搜索和详情工具实际返回过的商品
+- [x] 在 `add_to_cart` / `update_cart_item` 执行前检查：product_id 是否在 `seen_products` 里？
+- [x] 如果不在，不执行操作，返回一个「held（已拦截）」结果，告诉模型「这个 ID 没有在本次会话的搜索结果中出现，请先搜索」
+- [x] 引入 `ToolOutcome` 数据类：区分成功、错误、和「被拦截」三种结果
+- [x] 写 `test_gates.py` 的第一批用例：没见过的 ID 被拦截、见过的 ID 放行、拦截结果的文本告诉模型怎么恢复。门控逻辑是确定性的行为约束，写完就应该立刻用测试锁住
+- [x] 在 `EVALS.md` 里启用第 9 行（gate-001-hallucinated-id）：输入一个不存在的 ID，期望最终购物车为空且模型改为搜索
 
 **验证**：`pytest test_gates.py` 通过（单元测试）。故意输入「把 XYZ-999 加入购物车」→ 模型调用
 `add_to_cart("XYZ-999")` → 被拦截 → 模型自动改为先搜索（模型行为 eval）。
