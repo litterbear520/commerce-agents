@@ -6,7 +6,7 @@
 ## 怎么用这份路线图
 
 - 每步的 `- [ ]` 是待办，做完打勾。**验证**告诉你怎么确认做对了，**设计决策**解释为什么这样做。
-- 路径标注的都是仓库最终位置，对照代码用。Stage A 的代码还在一个 `agent.py` 里，
+- 路径标注的都是仓库最终位置，对照代码用。Stage A 的代码放在 `workspace/` 目录下按步骤编号（`00_llm_request.py`、`01_search_tool.py` …），
 Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 - 四种验证各管各的：**单元测试**管门控和围栏，**集成测试**用假模型跑对话，
 **模型行为 eval** 用真模型跑任务集，**部署验收**验认证和并发。每步标了属于哪种。
@@ -46,7 +46,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 - [ ] 调用 `client.messages.create()`，传入一句系统提示词和一条用户消息。提示词参考 `shopping-agent/core/shopping_agent/prompt.py` 的 `build_static_system()` 的第一行——先只用开头那一句（`"You are the shopping assistant for ACME, talking with a customer..."`），完整的提示词到 Step 10 再组装
 - [ ] 打印 `response.content[0].text`
 
-**验证**：`python agent.py` — 看到模型回复了一段购物建议文本。
+**验证**：`python workspace/00_llm_request.py` — 看到模型回复了一段购物建议文本。
 
 **设计决策**：为什么不从 LangChain/CrewAI 这些框架开始？因为规则 1 — 一个模型拥有对话。
 框架的路由和编排在这个项目里是多余的中间层；直接调 API 能让你完全控制发给模型的每个字节。
@@ -215,14 +215,14 @@ Stage C 之后再加多次运行取均值、模型裁判、以及不同模型配
 
 ## Stage B · 代码膨胀，该拆了
 
-> 你的 agent.py 已经膨胀到几百行了。类型、后端、执行器、工具定义全混在一起。
+> 你的 `workspace/` 脚本已经膨胀到几百行了。类型、后端、执行器、工具定义全混在一起。
 > 这个阶段的目标不是加新功能，而是把代码拆成可维护的包结构，并建立测试基础设施。
 
 
 
 ### 06 · 拆文件：类型 + 后端 ABC + 配置
 
-**起点**：一个巨大的 agent.py，改一个地方怕破坏另一个地方。
+**起点**：`workspace/` 里的脚本越来越大，改一个地方怕破坏另一个地方。
 
 **做什么**：
 
