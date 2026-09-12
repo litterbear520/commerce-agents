@@ -37,7 +37,7 @@
 
 **做什么**：
 - [ ] 写一个脚本，用 `anthropic.Anthropic()` 创建客户端
-- [ ] 调用 `client.messages.create()`，传入一句系统提示词（"You are a shopping assistant for ACME"）和一条用户消息
+- [ ] 调用 `client.messages.create()`，传入一句系统提示词和一条用户消息。提示词参考 `shopping-agent/core/shopping_agent/prompt.py` 的 `build_static_system()` 的第一行——先只用开头那一句（`"You are the shopping assistant for ACME, talking with a customer..."`），完整的提示词到 Step 10 再组装
 - [ ] 打印 `response.content[0].text`
 
 **验证**：`python agent.py` — 看到模型回复了一段购物建议文本。
