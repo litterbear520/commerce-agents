@@ -1,6 +1,7 @@
 import json
 import re
 import unicodedata
+from typing import Any
 
 
 # ── 清洗 & 围栏 ───────────────────────────────────────────────────
@@ -81,7 +82,7 @@ class Fence:
         text = _TURN_BOUNDARY.sub(r"\1\2 -", text)
         return text
 
-    def sanitize_value(self, value: object) -> object:
+    def sanitize_value(self, value: Any) -> Any:
         """递归清洗：字典/列表里的每个字符串叶子都单独清洗。
 
         原项目在这里逐个处理叶子节点，而不是把整个 JSON 字符串一起清洗。
