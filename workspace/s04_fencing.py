@@ -39,58 +39,73 @@ _SPECIAL_TOKEN = re.compile(
 )
 
 
-def sanitize_text(text: str, fence_label: str | None = None) -> str:
-    """清洗不可信文本，去除能破坏围栏或冒充对话结构的内容。
-
-    步骤：
-    1. NFKC 标准化 — 全角字符、连字符等统一成标准形式
-    2. 删除零宽字符 — 防止在标签里塞隐形字符绕过匹配
-    3. 替换控制字符 — 正常文本不会有 \\x00 等
-    4. 循环清除特殊 token + 围栏标记 — 直到没有变化（防嵌套逃逸）
-    5. 改写对话轮次边界 — \\n\\nHuman: 变成 \\n\\nHuman -
-    """
-    # 1. NFKC 标准化
-    text = unicodedata.normalize("NFKC", text)
-    # 2. 零宽字符
-    text = _INVISIBLE.sub("", text)
-    # 3. 控制字符 → 空格
-    text = _CONTROL.sub(" ", text)
-    # 4. 特殊 token + 围栏标记（循环到收敛，防嵌套逃逸）
-    fence_pat = re.compile(
-        rf"<\s*/?\s*{re.escape(fence_label)}(?![A-Za-z0-9_])[^>]*>",
-        re.IGNORECASE,
-    ) if fence_label else None
-    while True:
-        cleaned = _SPECIAL_TOKEN.sub("[removed]", text)
-        if fence_pat:
-            cleaned = fence_pat.sub("[removed]", cleaned)
-        if cleaned == text:
-            break
-        text = cleaned
-    # 5. 对话轮次边界 → 无害形式（Human: → Human -）
-    text = _TURN_BOUNDARY.sub(r"\1\2 -", text)
-    return text
-
-
 class Fence:
     """围栏：用 XML 标签把第三方内容包起来，告诉模型这是数据不是指令。
 
     项目中对应 commerce_common/fencing.py 的 Fence dataclass。
+    sanitize_text 是 Fence 的方法（而不是独立函数），因为清洗需要知道围栏标签名。
     """
     def __init__(self, label: str, notice: str):
         self.label = label    # XML 标签名，如 "storefront_data"
         self.notice = notice  # 写在系统提示词里的信任规则
+        # 预编译围栏标记的正则（匹配 <label>、</label>、带属性的变体）
+        self._marker = re.compile(
+            rf"<\s*/?\s*{re.escape(label)}(?![A-Za-z0-9_])[^>]*>",
+            re.IGNORECASE,
+        )
+
+    def sanitize_text(self, text: str) -> str:
+        """清洗不可信文本，去除能破坏围栏或冒充对话结构的内容。
+
+        步骤：
+        1. NFKC 标准化 — 全角字符、连字符等统一成标准形式
+        2. 删除零宽字符 — 防止在标签里塞隐形字符绕过匹配
+        3. 替换控制字符 — 正常文本不会有 \\x00 等
+        4. 循环清除特殊 token + 围栏标记 — 直到没有变化（防嵌套逃逸）
+        5. 改写对话轮次边界 — \\n\\nHuman: 变成 \\n\\nHuman -
+        """
+        # 1. NFKC 标准化
+        text = unicodedata.normalize("NFKC", text)
+        # 2. 零宽字符
+        text = _INVISIBLE.sub("", text)
+        # 3. 控制字符 → 空格
+        text = _CONTROL.sub(" ", text)
+        # 4. 特殊 token + 围栏标记（循环到收敛，防嵌套逃逸）
+        while True:
+            cleaned = _SPECIAL_TOKEN.sub("[removed]", text)
+            cleaned = self._marker.sub("[removed]", cleaned)
+            if cleaned == text:
+                break
+            text = cleaned
+        # 5. 对话轮次边界 → 无害形式（Human: → Human -）
+        text = _TURN_BOUNDARY.sub(r"\1\2 -", text)
+        return text
+
+    def sanitize_value(self, value: object) -> object:
+        """递归清洗：字典/列表里的每个字符串叶子都单独清洗。
+
+        原项目在这里逐个处理叶子节点，而不是把整个 JSON 字符串一起清洗。
+        这样能确保字典的 key 也被清洗，嵌套结构里的每个字符串都不会漏。
+        """
+        if isinstance(value, str):
+            return self.sanitize_text(value)
+        if isinstance(value, dict):
+            return {
+                self.sanitize_text(str(k)): self.sanitize_value(v)
+                for k, v in value.items()
+            }
+        if isinstance(value, (list, tuple)):
+            return [self.sanitize_value(v) for v in value]
+        return value  # 数字、布尔值等原样返回
 
     def fence_payload(self, data: dict | list | str) -> str:
         """清洗数据并包裹在围栏标签里。"""
-        if isinstance(data, str):
-            body = sanitize_text(data, self.label)
+        # 递归清洗每个叶子节点
+        sanitized = self.sanitize_value(data)
+        if isinstance(sanitized, str):
+            body = sanitized
         else:
-            # 先序列化成 JSON，再清洗整个字符串
-            body = sanitize_text(
-                json.dumps(data, ensure_ascii=False),
-                self.label,
-            )
+            body = json.dumps(sanitized, ensure_ascii=False)
         return f"<{self.label}>\n{body}\n</{self.label}>"
 
 
