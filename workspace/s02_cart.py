@@ -1,9 +1,10 @@
 import json
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from anthropic import Anthropic
+from anthropic import Anthropic  # noqa: E402
 
 client = Anthropic(base_url="https://api.deepseek.com/anthropic")
 model = "deepseek-v4-flash"
@@ -11,18 +12,54 @@ system = "你是一个 ACME 购物助手。"
 
 # ── 假商品列表（来自 EVALS.md 的 6 个商品）──────────────────────────
 PRODUCTS = [
-    {"id": "AR-1104", "title": "ACME Select 矮轴机械键盘", "price": 99.0, "rating": 4.6, "in_stock": True,
-     "description": "75% 紧凑布局，Gateron 矮轴红轴，铝合金框架，USB-C 有线连接。"},
-    {"id": "AR-1105", "title": "ACME Select 主动降噪耳机", "price": 249.0, "rating": 4.8, "in_stock": True,
-     "description": "混合主动降噪，40mm 驱动单元，蓝牙 5.3，续航 30 小时，可折叠设计。"},
-    {"id": "AR-1106", "title": "ACME Select 1080p 自动取景摄像头", "price": 69.0, "rating": 4.3, "in_stock": True,
-     "description": "1080p/30fps，AI 自动取景和人像居中，内置双麦克风，USB 即插即用。"},
-    {"id": "AR-1107", "title": "ACME Studio 可调节铝合金笔记本支架", "price": 39.0, "rating": 4.5, "in_stock": True,
-     "description": "6 档高度可调，铝合金材质，承重 8kg，适合 10-17 寸笔记本。"},
-    {"id": "AR-1002", "title": "ACME Signature 15Bar 意式咖啡机（带蒸汽棒）", "price": 329.0, "rating": 4.7, "in_stock": False,
-     "description": "15Bar 意式萃取，不锈钢蒸汽棒可打奶泡，58mm 无底手柄，2L 水箱。"},
-    {"id": "AR-1008", "title": "ACME Rest 加重毯 Queen 尺寸", "price": 49.0, "rating": 4.4, "in_stock": True,
-     "description": "Queen 尺寸 150×200cm，玻璃微珠填充，透气棉面料，可机洗。"},
+    {
+        "id": "AR-1104",
+        "title": "ACME Select 矮轴机械键盘",
+        "price": 99.0,
+        "rating": 4.6,
+        "in_stock": True,
+        "description": "75% 紧凑布局，Gateron 矮轴红轴，铝合金框架，USB-C 有线连接。",
+    },
+    {
+        "id": "AR-1105",
+        "title": "ACME Select 主动降噪耳机",
+        "price": 249.0,
+        "rating": 4.8,
+        "in_stock": True,
+        "description": "混合主动降噪，40mm 驱动单元，蓝牙 5.3，续航 30 小时，可折叠设计。",
+    },
+    {
+        "id": "AR-1106",
+        "title": "ACME Select 1080p 自动取景摄像头",
+        "price": 69.0,
+        "rating": 4.3,
+        "in_stock": True,
+        "description": "1080p/30fps，AI 自动取景和人像居中，内置双麦克风，USB 即插即用。",
+    },
+    {
+        "id": "AR-1107",
+        "title": "ACME Studio 可调节铝合金笔记本支架",
+        "price": 39.0,
+        "rating": 4.5,
+        "in_stock": True,
+        "description": "6 档高度可调，铝合金材质，承重 8kg，适合 10-17 寸笔记本。",
+    },
+    {
+        "id": "AR-1002",
+        "title": "ACME Signature 15Bar 意式咖啡机（带蒸汽棒）",
+        "price": 329.0,
+        "rating": 4.7,
+        "in_stock": False,
+        "description": "15Bar 意式萃取，不锈钢蒸汽棒可打奶泡，58mm 无底手柄，2L 水箱。",
+    },
+    {
+        "id": "AR-1008",
+        "title": "ACME Rest 加重毯 Queen 尺寸",
+        "price": 49.0,
+        "rating": 4.4,
+        "in_stock": True,
+        "description": "Queen 尺寸 150×200cm，玻璃微珠填充，透气棉面料，可机洗。",
+    },
 ]
 
 # ── 购物车状态 ──────────────────────────────────────────────────────
@@ -159,6 +196,7 @@ tools = [
 
 # ── 工具函数 ────────────────────────────────────────────────────────
 
+
 def search_products(query: str, limit: int = 5) -> str:
     """在假商品列表里做简单的关键词匹配，返回 JSON 字符串。"""
     query_lower = query.lower()
@@ -192,13 +230,28 @@ def add_to_cart(product_id: str, quantity: int = 1) -> str:
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] += quantity
-            return json.dumps({"ok": True, "product_id": product_id,
-                               "title": product["title"], "quantity": item["quantity"]}, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "ok": True,
+                    "product_id": product_id,
+                    "title": product["title"],
+                    "quantity": item["quantity"],
+                },
+                ensure_ascii=False,
+            )
     # 新增一行
-    cart.append({"product_id": product_id, "title": product["title"],
-                 "price": product["price"], "quantity": quantity})
-    return json.dumps({"ok": True, "product_id": product_id,
-                       "title": product["title"], "quantity": quantity}, ensure_ascii=False)
+    cart.append(
+        {
+            "product_id": product_id,
+            "title": product["title"],
+            "price": product["price"],
+            "quantity": quantity,
+        }
+    )
+    return json.dumps(
+        {"ok": True, "product_id": product_id, "title": product["title"], "quantity": quantity},
+        ensure_ascii=False,
+    )
 
 
 def update_cart_item(product_id: str, quantity: int) -> str:
@@ -206,8 +259,9 @@ def update_cart_item(product_id: str, quantity: int) -> str:
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] = quantity
-            return json.dumps({"ok": True, "product_id": product_id,
-                               "quantity": quantity}, ensure_ascii=False)
+            return json.dumps(
+                {"ok": True, "product_id": product_id, "quantity": quantity}, ensure_ascii=False
+            )
     return json.dumps({"error": f"购物车中没有商品 {product_id}"}, ensure_ascii=False)
 
 
@@ -224,10 +278,10 @@ def remove_from_cart(product_id: str) -> str:
 TOOL_MAP = {
     "search_products": search_products,
     "get_product_details": get_product_details,
-    "get_cart": get_cart,                       # get
-    "add_to_cart": add_to_cart,                 # post
-    "update_cart_item": update_cart_item,       # put
-    "remove_from_cart": remove_from_cart,       # delete
+    "get_cart": get_cart,  # get
+    "add_to_cart": add_to_cart,  # post
+    "update_cart_item": update_cart_item,  # put
+    "remove_from_cart": remove_from_cart,  # delete
 }
 
 
@@ -265,9 +319,11 @@ if __name__ == "__main__":
                     run = TOOL_MAP[block.name]
                     output = run(**block.input)  # type: ignore[arg-type]
                     print(f"[工具结果] {output}")
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": output,
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": output,
+                        }
+                    )
             messages.append({"role": "user", "content": tool_results})

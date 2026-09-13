@@ -7,8 +7,10 @@ import pytest
 # 把 workspace/ 加入 Python 路径
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from s03_provenance_gate import seen_products as s03_seen, cart as s03_cart
-from s04_fencing import seen_products as s04_seen, cart as s04_cart
+from s03_provenance_gate import cart as s03_cart
+from s03_provenance_gate import seen_products as s03_seen
+from s04_fencing import cart as s04_cart
+from s04_fencing import seen_products as s04_seen
 
 
 @pytest.fixture(autouse=True)

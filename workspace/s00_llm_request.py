@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from anthropic import Anthropic
+from anthropic import Anthropic  # noqa: E402
 
 client = Anthropic(base_url="https://api.deepseek.com/anthropic")
 model = "deepseek-v4-flash"
@@ -10,10 +11,7 @@ messages: list = [{"role": "user", "content": "你好"}]
 
 if __name__ == "__main__":
     response = client.messages.create(
-        model=model,
-        system=system,
-        max_tokens=1000,
-        messages=messages
+        model=model, system=system, max_tokens=1000, messages=messages
     )
 
     for block in response.content:
