@@ -41,16 +41,25 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 **起点**：一个空目录，一个 venv，`pip install anthropic`。
 
-**做什么**：
+
+#### 做什么
 
 - [x] 写一个脚本，用 `anthropic.Anthropic()` 创建客户端
-- [x] 调用 `client.messages.create()`，传入一句系统提示词和一条用户消息。提示词参考 `shopping-agent/core/shopping_agent/prompt.py` 的 `build_static_system()` 的第一行——先只用开头那一句（`"You are the shopping assistant for ACME, talking with a customer..."`），完整的提示词到 Step 10 再组装
+- [x] 调用 `client.messages.create()`，传入一句系统提示词和一条用户消息
+  - 提示词参考 `shopping-agent/core/shopping_agent/prompt.py` 的 `build_static_system()` 第一行，完整提示词到 Step 10 再组装
 - [x] 打印 `response.content[0].text`
 
-**验证**：`python workspace/00_llm_request.py` — 看到模型回复了一段购物建议文本。
 
-**设计决策**：为什么不从 LangChain/CrewAI 这些框架开始？因为规则 1 — 一个模型拥有对话。
-框架的路由和编排在这个项目里是多余的中间层；直接调 API 能让你完全控制发给模型的每个字节。
+#### 验证
+
+`python workspace/s00_llm_request.py` — 看到模型回复了一段购物建议文本。
+
+
+#### 设计决策
+
+> 为什么不从 LangChain/CrewAI 这些框架开始？
+
+规则 1 — 一个模型拥有对话。框架的路由和编排在这个项目里是多余的中间层；直接调 API 能让你完全控制发给模型的每个字节。
 
 ---
 
@@ -60,20 +69,29 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 **起点**：模型能聊天，但它不知道店里有什么。
 
-**做什么**：
 
-- [x] 定义一个 `search_products` 工具（JSON Schema）：接收 `query`、`filters`、`limit`
-- [x] 写一个内存里的假商品列表（5 个就够），实现搜索函数（关键词匹配）
+#### 做什么
+
+- [x] 定义 `search_products` 工具（JSON Schema）：接收 `query`、`filters`、`limit`
+- [x] 写内存里的假商品列表（5 个就够），实现搜索函数（关键词匹配）
 - [x] 把工具传给 `messages.create(tools=[...])`
-- [x] 检查 response 的 `stop_reason`：如果是 `tool_use`，提取工具名和参数，执行搜索，把结果作为 `tool_result` 再发一轮
-- [x] 循环直到 `stop_reason == "end_turn"`
+- [x] 检查 `stop_reason`：
+  - `tool_use` → 提取工具名和参数 → 执行搜索 → 把结果作为 `tool_result` 再发一轮
+  - `end_turn` → 结束循环
 
-**验证**：用户说「我想找耳机」→ 模型调用 `search_products` → 你的函数返回结果 → 模型用结果回答。
-多试几句不同的话（找缺货的、带预算的、打招呼的），记下哪些成功了、哪些不对——
-这些就是 Step 02.5 任务集的素材。
 
-**设计决策**：工具的 JSON Schema 不是随便写的——每个字段的 `description` 就是给模型的指令。
-参考最终版本 `shopping-agent/core/shopping_agent/tools/registry.py` 的 `build_tools()` 函数，
+#### 验证
+
+用户说「我想找耳机」→ 模型调用 `search_products` → 函数返回结果 → 模型用结果回答。
+
+多试几句不同的话（找缺货的、带预算的、打招呼的），记下哪些成功了、哪些不对——这些就是 Step 02.5 任务集的素材。
+
+
+#### 设计决策
+
+> 工具的 JSON Schema 不是随便写的——每个字段的 `description` 就是给模型的指令。
+
+参考 `shopping-agent/core/shopping_agent/tools/registry.py` 的 `build_tools()`，
 看 `search_products` 的 description 如何告诉模型什么时候该用、怎么用。
 这就是规则 1 的体现——一条规则放在工具描述、提示词还是技能里，取决于它被用到的频率。
 
@@ -85,19 +103,26 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 **起点**：能搜索了，但不能看详情、不能加购物车。
 
-**做什么**：
 
-- [x] 加入 `get_product_details` 工具：传 `product_id`，返回完整信息（含规格、评价）
-- [x] 加入 `get_cart`、`add_to_cart`、`update_cart_item`、`remove_from_cart` 四个购物车工具
-- [x] 在内存里维护一个购物车状态（`list[CartItem]`）
+#### 做什么
+
+- [x] 加入 `get_product_details`：传 `product_id`，返回完整信息（含规格、评价）
+- [x] 加入四个购物车工具：`get_cart`、`add_to_cart`、`update_cart_item`、`remove_from_cart`
+- [x] 在内存里维护购物车状态（`list[CartItem]`）
 - [x] 更新循环：一轮可能有多个工具调用，全部执行完再发回去
 
-**验证**：对话中搜索 → 看详情 → 加入购物车 → 查看购物车 — 完整流程跑通。
 
-**设计决策**：购物车操作为什么是四个独立工具而不是一个 `manage_cart(action=...)`？
-因为每个工具的 description 就是该操作的使用条件。分开定义让模型更精确地知道什么时候该做什么。
-参考 `shopping-agent/core/shopping_agent/tools/registry.py` 里 `add_to_cart` 的 description：
-它不只说「加入购物车」，还说了前置条件（先看详情确认库存和选项）。
+#### 验证
+
+搜索 → 看详情 → 加入购物车 → 查看购物车 — 完整流程跑通。
+
+
+#### 设计决策
+
+> 购物车操作为什么是四个独立工具而不是一个 `manage_cart(action=...)`？
+
+每个工具的 description 就是该操作的使用条件。分开定义让模型更精确地知道什么时候该做什么。
+参考 `tools/registry.py` 里 `add_to_cart` 的 description：不只说「加入购物车」，还说了前置条件（先看详情确认库存和选项）。
 
 ---
 
@@ -106,25 +131,32 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ### 02.5 · 把你试过的对话整理成任务集
 
 **起点**：搜索和购物车都跑通了。前两步你手动试了好几句话，有的成功了有的不对。
-现在把这些试过的对话整理成一张表——这就是你的任务集，后面每改一次代码都可以重新跑一遍，
-看有没有把原来好的东西改坏。
+现在整理成一张可重复跑的表。
 
-**做什么**：
 
-- [x] 打开仓库根目录的 `EVALS.md`，它已经按你的假商品列表写好了 8 个任务（4 个搜索 + 4 个购物车）
-- [x] 把 Step 01 和 Step 02 里你手动跑过的对话跟表里的任务对一遍——你试过的那些话是不是都在里面了？
-- [x] 跑一遍表里的 8 个任务（就是手动输入那句话，看结果对不对），在最右列打 ✓ 或 ✗
-- [x] 如果你试过某句话表里没有，按同样的格式加一行
+#### 做什么
 
-**验证**：`EVALS.md` 里每一行都跑过了，最右列都填了 ✓ 或 ✗。
+- [x] 打开 `EVALS.md`，它已写好 8 个任务（4 搜索 + 4 购物车）
+- [x] 跟你手动试过的对话对一遍——试过的话是不是都在里面了？
+- [x] 跑一遍 8 个任务，在最右列打 ✓ 或 ✗
+- [x] 试过某句话表里没有？按同样格式加一行
 
-**设计决策**：为什么到这里才写任务集，而不是写代码之前？因为你需要先亲眼看到 agent 能做什么、
-会犯什么错，才知道「成功」和「失败」长什么样。任务集不是凭空设计的——它就是你手动试过的对话，
-只不过写成了一张可以重复跑的表。
-这份任务集从现在开始累积运行记录，每个 Stage 结束时对比一次；先做手动检查，
-Stage C 之后再加多次运行取均值、模型裁判、以及不同模型配置的对比。
-仓库 `plugins/commerce-builder/skills/commerce-evals/SKILL.md` 给出了用例 schema 和运行模式；
-`EVALS.md` 的列名沿用了那份 schema 的字段名，到 Stage C 升级成评估套件时不用改词。
+
+#### 验证
+
+`EVALS.md` 里每一行都跑过了，最右列都填了 ✓ 或 ✗。
+
+
+#### 设计决策
+
+> 为什么到这里才写任务集，而不是写代码之前？
+
+你需要先亲眼看到 agent 能做什么、会犯什么错，才知道「成功」和「失败」长什么样。
+任务集不是凭空设计的——就是你手动试过的对话，写成了一张可以重复跑的表。
+
+**后续演进**：先手动检查，Stage C 之后加多次运行取均值、模型裁判、不同模型配置对比。
+`EVALS.md` 的列名沿用 `plugins/commerce-builder/skills/commerce-evals/SKILL.md` 的 schema 字段名，
+升级评估套件时不用改词。
 
 ---
 
@@ -132,24 +164,44 @@ Stage C 之后再加多次运行取均值、模型裁判、以及不同模型配
 
 ### 03 · 第一个 bug：模型幻觉出商品 ID
 
-**起点**：购物车能用了，但你发现模型有时候会编造一个不存在的商品 ID 然后尝试加购物车。
+**起点**：购物车能用了，但模型有时候会编造一个不存在的商品 ID 然后尝试加购物车。
 
-**做什么**：
 
-- [x] 引入 `seen_products: dict[str, Product]` — 记录本次会话中搜索和详情工具实际返回过的商品
-- [x] 在 `add_to_cart` / `update_cart_item` 执行前检查：product_id 是否在 `seen_products` 里？
-- [x] 如果不在，不执行操作，返回一个「held（已拦截）」结果，告诉模型「这个 ID 没有在本次会话的搜索结果中出现，请先搜索」
-- [x] 引入 `ToolOutcome` 数据类：区分成功、错误、和「被拦截」三种结果
-- [x] 写 `test_gates.py` 的第一批用例：没见过的 ID 被拦截、见过的 ID 放行、拦截结果的文本告诉模型怎么恢复。门控逻辑是确定性的行为约束，写完就应该立刻用测试锁住
-- [x] 在 `EVALS.md` 里启用第 9 行（gate-001-hallucinated-id）：输入一个不存在的 ID，期望最终购物车为空且模型改为搜索
+#### 做什么
 
-**验证**：`pytest test_gates.py` 通过（单元测试）。故意输入「把 XYZ-999 加入购物车」→ 模型调用
-`add_to_cart("XYZ-999")` → 被拦截 → 模型自动改为先搜索（模型行为 eval）。
+**来源追踪**
 
-**设计决策**：为什么用「held（搁置）」而不是「error（错误）」？因为这不是模型犯了错——它只是在合理推测一个 ID。
-`held` 告诉它「你的操作被暂时搁置，按这个方式可以恢复」，比 error 的语气更准确，模型的恢复行为也更好。
-参考 `commerce-common/commerce_common/streaming.py` 的 `ToolOutcome` 类。
-这就是规则 4 — 写操作必须校验数据来源。
+- [x] 引入 `seen_products: dict[str, Product]` — 记录本次会话中工具实际返回过的商品
+
+**写操作门控**
+
+- [x] `add_to_cart` / `update_cart_item` 执行前检查：`product_id` 是否在 `seen_products` 里？
+- [x] 不在 → 不执行，返回 `held`（已拦截），告诉模型「请先搜索」
+
+**`ToolOutcome` 数据类**
+
+- [x] 区分三种结果：`ok`（成功）、`error`（业务错误）、`held`（被拦截，可恢复）
+
+**测试 & 评估**
+
+- [x] 写 `test_gates.py`：没见过的 ID 被拦截、见过的放行、拦截文本含恢复提示
+- [x] 启用 `EVALS.md` 第 9 行：输入不存在的 ID，期望购物车为空且模型改为搜索
+
+
+#### 验证
+
+- **单元测试**：`pytest test_gates.py` 通过
+- **模型行为 eval**：「把 XYZ-999 加入购物车」→ `add_to_cart("XYZ-999")` 被拦截 → 模型自动改为先搜索
+
+
+#### 设计决策
+
+> 为什么用 `held`（搁置）而不是 `error`（错误）？
+
+这不是模型犯了错——它只是在合理推测一个 ID。`held` 告诉它「操作被暂时搁置，按这个方式可以恢复」，
+比 error 的语气更准确，模型的恢复行为也更好。
+
+参考 `commerce-common/commerce_common/streaming.py` 的 `ToolOutcome` 类。这就是规则 4 — 写操作必须校验数据来源。
 
 ---
 
