@@ -1,15 +1,5 @@
 import json
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-from anthropic import Anthropic  # noqa: E402
-
-client = Anthropic(base_url="https://api.deepseek.com/anthropic")
-model = "deepseek-v4-flash"
-system = "你是一个 ACME 购物助手。"
-
 # ── 假商品列表（来自 EVALS.md 的 6 个商品）──────────────────────────
 PRODUCTS = [
     {
@@ -287,6 +277,14 @@ TOOL_MAP = {
 
 # ── 对话循环 ────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    from anthropic import Anthropic
+
+    client = Anthropic(base_url="https://api.deepseek.com/anthropic")
+    model = "deepseek-v4-flash"
+    system = "你是一个 ACME 购物助手。"
     messages: list = []
 
     while True:
