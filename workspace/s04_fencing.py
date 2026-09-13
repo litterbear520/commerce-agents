@@ -7,16 +7,18 @@ import unicodedata
 # 项目中对应 commerce-common/commerce_common/fencing.py
 
 # 零宽字符：肉眼不可见，但能插在标签里破坏字符串匹配
+# 用 (起始码点, 结束码点) 定义范围，避免源码里出现字面量的不可见字符
+_INVISIBLE_RANGES = (
+    (0x00AD, 0x00AD),  # 软连字符
+    (0x200B, 0x200F),  # 零宽空格、零宽连接符、LRM/RLM
+    (0x2028, 0x2029),  # 行分隔符、段落分隔符
+    (0x202A, 0x202E),  # 双向文本控制
+    (0x2060, 0x2064),  # word joiner 等
+    (0x2066, 0x2069),  # 双向隔离
+    (0xFEFF, 0xFEFF),  # BOM / 零宽不间断空格
+)
 _INVISIBLE = re.compile(
-    "["
-    "­"           # 软连字符
-    "​-‏"    # 零宽空格、零宽连接符、LRM/RLM
-    " - "    # 行/段分隔符
-    "‪-‮"    # 双向文本控制
-    "⁠-⁤"    # word joiner 等
-    "⁦-⁩"    # 双向隔离
-    "﻿"           # BOM / 零宽不间断空格
-    "]"
+    "[" + "".join(f"{chr(lo)}-{chr(hi)}" for lo, hi in _INVISIBLE_RANGES) + "]"
 )
 
 # 控制字符：ASCII 0-31 中除了 \t(09) \n(0a) \r(0d) 以外的都删
