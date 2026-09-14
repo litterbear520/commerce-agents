@@ -2,10 +2,8 @@
 
 验证 Fence.sanitize_text() 能处理各种注入手段，
 以及 Fence.fence_payload() 能正确包裹和清洗内容。
-
-写法与原项目 commerce-common/tests/test_fencing.py 一致：
-通过 Fence 实例调用 sanitize_text（它是方法，不是独立函数）。
 """
+# 通过 Fence 实例调用 sanitize_text（它是方法，不是独立函数）
 
 from s04_fencing import STOREFRONT_FENCE, Fence
 
