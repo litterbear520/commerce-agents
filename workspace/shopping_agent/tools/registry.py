@@ -1,5 +1,5 @@
-"""购物 agent 的工具契约，顺序固定。列表只取决于部署配置，
-因此每次请求发送的字节完全相同；某个工具能否响应调用由执行器决定。
+"""购物 agent 的工具定义，顺序固定。列表只取决于部署配置，
+因此每次请求发送的字节完全相同；某次调用能否执行由执行器判断。
 """
 # 项目中对应 shopping-agent/core/shopping_agent/tools/registry.py
 # 当前只包含 6 个基础工具（search + details + cart CRUD）
@@ -41,7 +41,7 @@ def _filters_schema() -> dict[str, Any]:
 
 
 def build_tools(config: ShoppingAgentConfig) -> list[dict[str, Any]]:
-    """一个部署的工具列表：固定顺序的内置工具，减去配置关闭的系统。"""
+    """一个部署的工具列表：固定顺序的内置工具。"""
 
     tools: list[dict[str, Any]] = [
         {
