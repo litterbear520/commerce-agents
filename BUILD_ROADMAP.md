@@ -303,11 +303,11 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [ ] 创建 `shopping-agent/core/` 包结构
-- [ ] 提取 `types.py`：`Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`、`ShoppingSessionContext`、`ShoppingSessionState`（包含 `seen_products`）— 只包含到目前为止用到的类型，`Order`、`Policy` 等到 Step 13 再加
-- [ ] 提取 `backend.py`：`StorefrontBackend` 抽象类 — 目前 6 个抽象方法（search、details、cart CRUD），Step 13 扩展到 11 个
-- [ ] 提取 `config.py`：`ShoppingAgentConfig` — 所有可调参数（模型名、max_tokens、迭代上限、购物车上限、系统开关）放在一个 Pydantic 模型里，`extra="forbid"` 让拼写错误在构造时就报错
-- [ ] 提取 `fencing.py`：定义 `STOREFRONT_FENCE`
+- [x] 创建 `shopping-agent/core/` 包结构
+- [x] 提取 `types.py`：`Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`、`ShoppingSessionContext`、`ShoppingSessionState`（包含 `seen_products`）— 只包含到目前为止用到的类型，`Order`、`Policy` 等到 Step 13 再加
+- [x] 提取 `backend.py`：`StorefrontBackend` 抽象类 — 目前 6 个抽象方法（search、details、cart CRUD），Step 13 扩展到 11 个
+- [x] 提取 `config.py`：`ShoppingAgentConfig` — 所有可调参数（模型名、max_tokens、迭代上限、购物车上限、系统开关）放在一个 Pydantic 模型里，`extra="forbid"` 让拼写错误在构造时就报错
+- [x] 提取 `fencing.py`：定义 `STOREFRONT_FENCE`
 
 #### 验证
 
