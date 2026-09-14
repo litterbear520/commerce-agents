@@ -450,8 +450,7 @@ def get_cart() -> ToolOutcome:
 
 
 def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
-    """把商品加入购物车。门控：来源 + 选项 + 库存 + 数量上限。"""
-    # 门控：来源检查 + 选项检查（family 商品不能直接加购物车）
+    # 门控：来源检查 + 选项检查 + 库存 + 数量上限
     if held := check_provenance(product_id) or check_options(product_id):
         return held
     product = seen_products[product_id]
@@ -496,7 +495,7 @@ def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
 
 
 def update_cart_item(product_id: str, quantity: int) -> ToolOutcome:
-    """修改购物车中已有商品的数量。门控：来源 + 选项 + 数量上限。"""
+    # 门控：来源 + 选项 + 数量上限
     if held := check_provenance(product_id) or check_options(product_id):
         return held
     requested = max(1, quantity)
