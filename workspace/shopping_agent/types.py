@@ -14,15 +14,11 @@ from pydantic import BaseModel, Field
 
 RecordT = TypeVar("RecordT")
 
-PROVENANCE_CAP = 200
-"""seen_products 字典最多保留多少条。超出时淘汰最早插入的。"""
+PROVENANCE_CAP = 200  # seen_products 字典最多保留多少条，超出时淘汰最早插入的
 
 
 def remember(records: dict[str, RecordT], key: str, value: RecordT) -> None:
-    """记录一条溯源，保持字典不超过 PROVENANCE_CAP。
-
-    先删再插，让同一个 key 刷新到字典末尾（Python 3.7+ 字典有序）。
-    """
+    # 先 pop 再插，让同一个 key 刷新到字典末尾（Python 3.7+ 字典有序）
     records.pop(key, None)
     records[key] = value
     while len(records) > PROVENANCE_CAP:
@@ -67,7 +63,7 @@ class Product(BaseModel):
 
 
 class ProductDetails(Product):
-    """商品详情，比 Product 多长描述、规格参数、评价摘要和变体列表。"""
+    # 商品详情：比 Product 多长描述、规格参数、评价摘要和变体列表
 
     long_description: str | None = None
     specs: dict[str, str] = Field(default_factory=dict)
@@ -76,7 +72,7 @@ class ProductDetails(Product):
 
 
 class SearchFilters(BaseModel):
-    """搜索过滤条件。"""
+    # 搜索过滤条件
 
     category: str | None = None
     min_price: float | None = None
@@ -90,7 +86,7 @@ class SearchFilters(BaseModel):
 
 
 class CartItem(BaseModel):
-    """购物车行项。``quantity`` 以售卖单位计数（一件、一晚、一个座位）。"""
+    """``quantity`` 以售卖单位计数（一件、一晚、一个座位）。"""
 
     product_id: str
     title: str
@@ -106,8 +102,6 @@ class CartItem(BaseModel):
 
 
 class Cart(BaseModel):
-    """购物车。"""
-
     items: list[CartItem] = Field(default_factory=list)
     currency: str = "USD"
 
@@ -124,8 +118,6 @@ class Cart(BaseModel):
 
 
 class ShoppingSessionContext(BaseModel):
-    """宿主每轮提供的会话上下文。"""
-
     # 项目中继承 ClockContext（带时区和 now），Step 17 迁到 commerce_common 时再加
 
     session_id: str
@@ -133,7 +125,7 @@ class ShoppingSessionContext(BaseModel):
 
 
 class ShoppingSessionState(BaseModel):
-    """宿主为会话持有的状态。``seen_products`` 是溯源记录：
+    """服务端为会话持有的状态。``seen_products`` 是溯源记录：
     购物车写操作只接受其中的 id，展示型工具调用从中富化。"""
 
     seen_products: dict[str, Product] = Field(default_factory=dict)
