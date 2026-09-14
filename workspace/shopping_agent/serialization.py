@@ -74,10 +74,10 @@ def product_details_payload(details: ProductDetails) -> dict[str, Any]:
 # ── 搜索结果 ─────────────────────────────────────────────────────────
 
 SEARCH_EMPTY_HEADER = (
-    "Search returned 0 results: nothing in the catalog matched this query. Run the "
-    "broader retry before telling the customer it is not carried, and do not present a "
-    "different product as the requested one. Search matches product text, not ids; "
-    "resolve a product id with get_product_details."
+    "搜索返回 0 条结果：目录中没有匹配此查询的商品。"
+    "在告知顾客没有该商品之前，先用更宽泛的关键词重试一次，"
+    "不要把其他商品当作顾客要找的那个。"
+    "搜索匹配的是商品文本而非 id；要解析商品 id 请用 get_product_details。"
 )
 
 
@@ -86,11 +86,10 @@ def search_result_header(count: int) -> str:
     if count == 0:
         return SEARCH_EMPTY_HEADER
     return (
-        f"Search returned {count} result(s): the catalog's closest text matches, "
-        "which can include related items rather than the exact thing searched for. "
-        "Treat a result as the requested item only if its title and attributes match; "
-        "if none do, the item was not found, and anything you offer instead is named "
-        "as a stand-in."
+        f"搜索返回 {count} 条结果：目录中最接近的文本匹配，"
+        "可能包含相关商品而非顾客要找的那个。"
+        "只有标题和属性都匹配时才算是顾客要的商品；"
+        "如果都不匹配则说明没找到，推荐的替代品要明确说明是替代。"
     )
 
 

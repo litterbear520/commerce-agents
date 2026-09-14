@@ -92,20 +92,18 @@ async def gated_add_to_cart(
         current = await backend.get_cart(session)
         existing = next((i for i in current.items if i.product_id == product_id), None)
         if existing is None and len(current.items) >= config.max_cart_lines:
-            return ToolOutcome.error("The cart is full.")
+            return ToolOutcome.error("购物车已满。")
         allowed = min(
             requested,
             max(0, max_quantity - (existing.quantity if existing else 0)),
         )
         if allowed <= 0:
-            return ToolOutcome.error(
-                f"This item is already at the per-item limit of {max_quantity}."
-            )
+            return ToolOutcome.error(f"该商品已达到单品上限 {max_quantity} 件。")
         cart = await backend.add_to_cart(session, product_id, allowed)
-    capped = f" (capped at the per-item limit of {max_quantity})" if allowed < requested else ""
+    capped = f"（已截断到单品上限 {max_quantity} 件）" if allowed < requested else ""
     return ToolOutcome(
-        f"Added {product_id} x{allowed}{capped}. "
-        f"Cart: {cart.item_count} items, subtotal {cart.currency} {cart.subtotal}."
+        f"已加购 {product_id} x{allowed}{capped}。"
+        f"购物车：{cart.item_count} 件商品，小计 {cart.currency} {cart.subtotal}。"
     )
 
 
@@ -125,13 +123,11 @@ async def gated_update_cart_item(
             return held
         cart = await backend.update_cart_item(session, product_id, applied)
     capped = (
-        f" (capped at the per-item limit of {config.max_quantity_per_item})"
-        if applied < requested
-        else ""
+        f"（已截断到单品上限 {config.max_quantity_per_item} 件）" if applied < requested else ""
     )
     return ToolOutcome(
-        f"Updated quantity{capped}. "
-        f"Cart: {cart.item_count} items, subtotal {cart.currency} {cart.subtotal}."
+        f"已更新数量{capped}。"
+        f"购物车：{cart.item_count} 件商品，小计 {cart.currency} {cart.subtotal}。"
     )
 
 
@@ -147,7 +143,7 @@ async def gated_remove_from_cart(
             return held
         cart = await backend.remove_from_cart(session, product_id)
     return ToolOutcome(
-        f"Removed. Cart: {cart.item_count} items, subtotal {cart.currency} {cart.subtotal}."
+        f"已移除。购物车：{cart.item_count} 件商品，小计 {cart.currency} {cart.subtotal}。"
     )
 
 
