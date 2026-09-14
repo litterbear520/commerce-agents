@@ -109,7 +109,7 @@ def search_result_text(query: str, products: Sequence[Product]) -> str:
 
 def cart_summary(cart: Cart) -> str:
     # 门控确认文本中的购物车摘要
-    return f"{cart.item_count} item(s), subtotal {cart.subtotal:.2f} {cart.currency}"
+    return f"{cart.item_count} 件商品，小计 {cart.subtotal:.2f} {cart.currency}"
 
 
 def cart_line_payload(item: CartItem) -> dict[str, Any]:

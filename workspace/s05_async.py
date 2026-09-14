@@ -79,7 +79,7 @@ class Fence:
         return text
 
     def sanitize_value(self, value: Any) -> Any:
-        # 递归清洗：字典/列表里的每个字符串叶子都单独清洗
+        # 递归清洗：字典/列表里的每个字符串都单独清洗
         if isinstance(value, str):
             return self.sanitize_text(value)
         if isinstance(value, dict):
