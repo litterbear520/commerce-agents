@@ -38,7 +38,7 @@ class StorefrontBackend(ABC):
     没有任何方法会下单或转账：``checkout`` 只是把购物车渲染出来交给服务端完成。
     """
 
-    # -- 商品目录 ----------------------------------------------------------------
+    # ── 商品目录 ────────────────────────────────────────────────────
 
     @abstractmethod
     async def search_products(
@@ -60,7 +60,7 @@ class StorefrontBackend(ABC):
         family 商品的 ``variants`` 携带其可购买的变体记录，
         这些记录连同 family 本身都会进入会话的溯源。变体的 id 返回该变体。"""
 
-    # -- 购物车 ------------------------------------------------------------------
+    # ── 购物车 ──────────────────────────────────────────────────────
 
     @abstractmethod
     async def get_cart(self, session: ShoppingSessionContext) -> Cart:
