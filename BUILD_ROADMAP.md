@@ -380,15 +380,15 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [ ] 在 `commerce-common/commerce_common/testing.py` 里构建测试基础设施：
+- [x] 在 `workspace/commerce_common/testing.py` 里构建测试基础设施（源码在 `commerce-common/commerce_common/testing.py`，我们在 workspace 下写子集）：
   - `FakeClient`：按预录顺序依次返回响应的假客户端
   - `FakeStream`：假的流式事件迭代器，支持分块工具输入
   - `FakeBlock` / `text_block()` / `tool_use_block()` / `create_response()` 等辅助函数
-- [ ] 在根 `conftest.py` 里构建 `FakeBackend`（实现 `StorefrontBackend`）：
+- [x] 在 `workspace/conftest.py` 里构建 `FakeBackend`（实现 `StorefrontBackend`）：
   - 5 个内存商品，包含一个恶意注入商品 `p-666` 和一个有选项的家族商品 `p-400`
   - 为什么要 p-666？因为每次跑测试都在验证注入防御
-- [ ] 把 Step 03-06 的 `test_gates.py`、Step 04 的 `test_fencing.py` 搬进 `shopping-agent/core/tests/` 和 `commerce-common/tests/`，改用 `FakeBackend`
-- [ ] 写 `shopping-agent/core/tests/`：
+- [x] 在 `shopping_agent/tests/` 下创建包版本的 `test_gates.py` 和 `test_fencing.py`（从 `shopping_agent.gates`、`shopping_agent.fencing` 导入）；Stage A 原始测试保留在 `tests/`
+- [x] 写 `shopping_agent/tests/`：
   - `test_executor.py`：搜索、添加、详情、购物车、围栏、清洗、来源校验、选项、售罄（订单/政策工具的测试在 Step 13 补）
   - `test_serialization.py`：精简格式的商品、变体、带选项值的购物车行
 - [ ] 创建 `.github/workflows/ci.yml` 的第一个 job `python`：`ruff check` + `ruff format --check` + `pytest`。Step 29 再加矩阵、供应链检查和 web build
