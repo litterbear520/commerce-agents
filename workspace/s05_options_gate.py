@@ -241,6 +241,10 @@ class ToolOutcome:
 PROVENANCE_GATE = "provenance"
 OPTIONS_GATE = "options"
 
+# 项目中对应 config.py 的 ShoppingAgentConfig
+MAX_QUANTITY_PER_ITEM = 24
+MAX_CART_LINES = 100
+
 
 def check_provenance(product_id: str) -> ToolOutcome | None:
     """product_id 没有会话来源记录时返回 held 结果，否则返回 None。"""
@@ -446,7 +450,7 @@ def get_cart() -> ToolOutcome:
 
 
 def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
-    """把商品加入购物车。门控：来源检查 + 选项检查 + 库存检查。"""
+    """把商品加入购物车。门控：来源 + 选项 + 库存 + 数量上限。"""
     # 门控：来源检查 + 选项检查（family 商品不能直接加购物车）
     if held := check_provenance(product_id) or check_options(product_id):
         return held
@@ -454,40 +458,53 @@ def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
     # 库存检查
     if not product["in_stock"]:
         return ToolOutcome.error(f"商品 {product['title']} 目前缺货")
+    requested = max(1, quantity)
+    # 购物车行数上限
+    existing = next((item for item in cart if item["product_id"] == product_id), None)
+    if existing is None and len(cart) >= MAX_CART_LINES:
+        return ToolOutcome.error("The cart is full.")
+    # 单品数量上限
+    current_qty = existing["quantity"] if existing else 0
+    allowed = min(requested, max(0, MAX_QUANTITY_PER_ITEM - current_qty))
+    if allowed <= 0:
+        return ToolOutcome.error(
+            f"This item is already at the per-item limit of {MAX_QUANTITY_PER_ITEM}."
+        )
     # 如果购物车里已有，增加数量
-    for item in cart:
-        if item["product_id"] == product_id:
-            item["quantity"] += quantity
-            return ToolOutcome.ok(
-                {
-                    "ok": True,
-                    "product_id": product_id,
-                    "title": product["title"],
-                    "quantity": item["quantity"],
-                }
-            )
+    if existing is not None:
+        existing["quantity"] += allowed
+        return ToolOutcome.ok(
+            {
+                "ok": True,
+                "product_id": product_id,
+                "title": product["title"],
+                "quantity": existing["quantity"],
+            }
+        )
     # 新增一行
     cart.append(
         {
             "product_id": product_id,
             "title": product["title"],
             "price": product["price"],
-            "quantity": quantity,
+            "quantity": allowed,
         }
     )
     return ToolOutcome.ok(
-        {"ok": True, "product_id": product_id, "title": product["title"], "quantity": quantity}
+        {"ok": True, "product_id": product_id, "title": product["title"], "quantity": allowed}
     )
 
 
 def update_cart_item(product_id: str, quantity: int) -> ToolOutcome:
-    """修改购物车中已有商品的数量。门控：来源检查 + 选项检查。"""
+    """修改购物车中已有商品的数量。门控：来源 + 选项 + 数量上限。"""
     if held := check_provenance(product_id) or check_options(product_id):
         return held
+    requested = max(1, quantity)
+    applied = min(requested, MAX_QUANTITY_PER_ITEM)
     for item in cart:
         if item["product_id"] == product_id:
-            item["quantity"] = quantity
-            return ToolOutcome.ok({"ok": True, "product_id": product_id, "quantity": quantity})
+            item["quantity"] = applied
+            return ToolOutcome.ok({"ok": True, "product_id": product_id, "quantity": applied})
     return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 

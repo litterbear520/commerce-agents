@@ -12,7 +12,7 @@ from s03_provenance_gate import (
     seen_products,
     update_cart_item,
 )
-from s05_options_gate import VARIANTS, check_options
+from s05_options_gate import MAX_CART_LINES, MAX_QUANTITY_PER_ITEM, VARIANTS, check_options
 from s05_options_gate import add_to_cart as s05_add_to_cart
 from s05_options_gate import cart as s05_cart
 from s05_options_gate import remember_products as s05_remember
@@ -175,3 +175,50 @@ def test_update_cart_blocks_family():
     }
     result = s05_update("AR-2000", 2)
     assert result.blocked == "options"
+
+
+# ── 数量上限（s05）────────────────────────────────────────────────
+
+PLAIN_PRODUCT = {
+    "id": "AR-1104",
+    "title": "ACME Select 矮轴机械键盘",
+    "price": 99.0,
+    "in_stock": True,
+}
+
+
+def test_add_to_cart_caps_quantity():
+    """加购数量超过单品上限时，被截断到上限。"""
+    s05_remember([PLAIN_PRODUCT])
+    result = s05_add_to_cart("AR-1104", quantity=30)
+    assert result.blocked is None
+    assert s05_cart[0]["quantity"] == MAX_QUANTITY_PER_ITEM  # 24，不是 30
+
+
+def test_add_to_cart_rejects_at_limit():
+    """已有 24 件再加 → 直接拒绝。"""
+    s05_remember([PLAIN_PRODUCT])
+    s05_cart.append({"product_id": "AR-1104", "title": "键盘", "price": 99.0, "quantity": 24})
+    result = s05_add_to_cart("AR-1104", quantity=1)
+    assert result.is_error is True
+    assert "per-item limit" in result.text
+
+
+def test_add_to_cart_rejects_cart_full():
+    """购物车已满 100 行，新商品被拒绝。"""
+    s05_remember([PLAIN_PRODUCT])
+    # 塞满 100 行不同的商品
+    for i in range(MAX_CART_LINES):
+        s05_cart.append({"product_id": f"FAKE-{i}", "title": "x", "price": 1.0, "quantity": 1})
+    result = s05_add_to_cart("AR-1104")
+    assert result.is_error is True
+    assert "full" in result.text
+
+
+def test_update_cart_caps_quantity():
+    """update 数量超过单品上限时，被截断到上限。"""
+    s05_remember([PLAIN_PRODUCT])
+    s05_cart.append({"product_id": "AR-1104", "title": "键盘", "price": 99.0, "quantity": 5})
+    result = s05_update("AR-1104", quantity=50)
+    assert result.is_error is False
+    assert s05_cart[0]["quantity"] == MAX_QUANTITY_PER_ITEM  # 24，不是 50
