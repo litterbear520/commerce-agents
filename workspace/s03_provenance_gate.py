@@ -61,7 +61,8 @@ seen_products: dict[str, dict] = {}  # 记录本次会话中工具返回过的�
 # ── ToolOutcome ─────────────────────────────────────────────────────
 # 项目中对应 commerce_common/streaming.py 的 ToolOutcome
 class ToolOutcome:
-    """工具调用结果：区分成功、错误、被拦截三种状态。"""
+    """一次工具调用的产物：result_text 给模型，events 给宿主。
+    blocked 指出拦截的门控名；is_error 标记失败。"""
 
     def __init__(self, text: str, is_error: bool = False, blocked: str | None = None):
         self.text = text
@@ -78,7 +79,7 @@ class ToolOutcome:
 
     @classmethod
     def held(cls, gate: str, text: str) -> "ToolOutcome":
-        """操作被搁置（held），不是错误，模型可以按提示恢复。"""
+        # held：操作被门控搁置，不是错误，模型可以按提示恢复
         return cls(text, blocked=gate)
 
 
