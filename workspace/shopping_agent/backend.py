@@ -1,4 +1,4 @@
-"""StorefrontBackend 接口：采用方唯一需要实现的集成面，
+"""StorefrontBackend 接口：采用方唯一需要实现的对接接口，
 将每个方法映射到自己的商品目录、购物车等服务。
 这些方法返回的所有内容都会经过围栏处理后才到达模型（fencing.py）。
 """
@@ -31,7 +31,7 @@ class Unavailable(Exception):
 
 
 class StorefrontBackend(ABC):
-    """每个方法代表 ``session`` 中的顾客操作，在服务端用服务端持有的凭证调用对应系统的
+    """每个方法代表 ``session`` 中的顾客操作，在服务端用它为会话持有的凭证调用对应系统的
     API；模型只看到方法的返回结果，看不到凭证。购物车方法是唯一的写操作；每次写入都
     经过执行器的溯源门控和数量上限（gates.py），并返回完整购物车，后端仍需在自己这边
     原子地执行业务规则（资格、库存、限额），因为执行器的锁只覆盖单进程内的会话。
@@ -57,7 +57,7 @@ class StorefrontBackend(ABC):
         self, session: ShoppingSessionContext, product_id: str
     ) -> ProductDetails | None:
         """模型传入的 id 对应的完整记录，id 不存在时返回 None。
-        family 商品的 ``variants`` 携带其可购买的变体记录，
+        family 商品的 ``variants`` 包含其可购买的变体记录，
         这些记录连同 family 本身都会进入会话的溯源。变体的 id 返回该变体。"""
 
     # ── 购物车 ──────────────────────────────────────────────────────
