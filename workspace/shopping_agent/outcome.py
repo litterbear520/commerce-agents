@@ -1,4 +1,3 @@
-"""工具调用的返回结果。"""
 # 项目中对应 commerce_common/streaming.py 的 ToolOutcome
 # Step 17 迁到 commerce_common 时再搬过去
 
@@ -33,5 +32,5 @@ class ToolOutcome:
 
     @property
     def refused(self) -> bool:
-        """被拒绝（错误或门控拦截）。"""
+        # 被拒绝：错误或门控拦截
         return self.is_error or self.blocked is not None
