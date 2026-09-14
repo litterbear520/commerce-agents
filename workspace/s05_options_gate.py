@@ -247,6 +247,7 @@ class ToolOutcome:
 # ── 门控检查 ────────────────────────────────────────────────────────
 # 项目中对应 shopping-agent/core/shopping_agent/gates.py
 PROVENANCE_GATE = "provenance"
+OPTIONS_GATE = "options"
 
 
 def check_provenance(product_id: str) -> ToolOutcome | None:
@@ -258,6 +259,22 @@ def check_provenance(product_id: str) -> ToolOutcome | None:
         f"product_id {product_id} 没有在本次会话的搜索或详情结果中出现过。"
         "请先调用 get_product_details 查询该 ID，或通过 search_products 搜索，"
         "然后用搜索结果中返回的 product_id 加入购物车。",
+    )
+
+
+def check_options(product_id: str) -> ToolOutcome | None:
+    """检查 product_id 是否是 family 商品（有未选择的选项）。是则拦截。
+    项目中对应 gates.py 的 check_options()。"""
+    product = seen_products.get(product_id)
+    if product is None or not product.get("options"):
+        return None
+    names = ", ".join(product["options"])
+    return ToolOutcome.held(
+        OPTIONS_GATE,
+        f"product_id {product_id} 还有选项需要选择（{names}），"
+        "购物车只接受具体的变体。请根据顾客的偏好确定每个选项，"
+        "或用选项值作为建议让顾客选择，然后用 get_product_details "
+        "返回的变体 product_id 加入购物车。",
     )
 
 
@@ -437,9 +454,9 @@ def get_cart() -> ToolOutcome:
 
 
 def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
-    """把商品加入购物车。门控：来源检查 + 库存检查。"""
-    # 门控：来源检查
-    if held := check_provenance(product_id):
+    """把商品加入购物车。门控：来源检查 + 选项检查 + 库存检查。"""
+    # 门控：来源检查 + 选项检查（family 商品不能直接加购物车）
+    if held := check_provenance(product_id) or check_options(product_id):
         return held
     product = seen_products[product_id]
     # 库存检查
@@ -472,8 +489,8 @@ def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
 
 
 def update_cart_item(product_id: str, quantity: int) -> ToolOutcome:
-    """修改购物车中已有商品的数量。门控：来源检查。"""
-    if held := check_provenance(product_id):
+    """修改购物车中已有商品的数量。门控：来源检查 + 选项检查。"""
+    if held := check_provenance(product_id) or check_options(product_id):
         return held
     for item in cart:
         if item["product_id"] == product_id:

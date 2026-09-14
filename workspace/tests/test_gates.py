@@ -12,6 +12,12 @@ from s03_provenance_gate import (
     seen_products,
     update_cart_item,
 )
+from s05_options_gate import VARIANTS, check_options
+from s05_options_gate import add_to_cart as s05_add_to_cart
+from s05_options_gate import cart as s05_cart
+from s05_options_gate import remember_products as s05_remember
+from s05_options_gate import seen_products as s05_seen
+from s05_options_gate import update_cart_item as s05_update
 
 # ── check_provenance ───────────────────────────────────────────────
 
@@ -96,3 +102,76 @@ def test_update_cart_item_requires_provenance():
     """update_cart_item 对没见过的 ID 同样被拦截。"""
     result = update_cart_item("XYZ-999", 3)
     assert result.blocked == "provenance"
+
+
+# ── check_options（s05）────────────────────────────────────────────
+
+
+def test_family_id_is_held():
+    """family 商品（有 options）被选项门控拦截。"""
+    s05_seen["AR-2000"] = {
+        "id": "AR-2000",
+        "title": "ACME 基础款圆领T恤",
+        "price": 79.0,
+        "in_stock": True,
+        "options": {"尺码": ["S", "M", "L"]},
+    }
+    result = check_options("AR-2000")
+    assert result is not None
+    assert result.blocked == "options"
+    assert "尺码" in result.text
+
+
+def test_variant_id_passes_options_check():
+    """变体商品（没有 options）通过选项门控。"""
+    s05_seen["AR-2001"] = VARIANTS["AR-2001"]
+    result = check_options("AR-2001")
+    assert result is None
+
+
+def test_plain_product_passes_options_check():
+    """普通商品（没有 options）通过选项门控。"""
+    s05_seen["AR-1104"] = {"id": "AR-1104", "title": "键盘", "price": 99.0, "in_stock": True}
+    result = check_options("AR-1104")
+    assert result is None
+
+
+def test_add_to_cart_blocks_family():
+    """s05 的 add_to_cart 对 family 商品返回 held。"""
+    s05_remember(
+        [
+            {
+                "id": "AR-2000",
+                "title": "ACME 基础款圆领T恤",
+                "price": 79.0,
+                "in_stock": True,
+                "options": {"尺码": ["S", "M", "L"]},
+            }
+        ]
+    )
+    result = s05_add_to_cart("AR-2000")
+    assert result.blocked == "options"
+    assert len(s05_cart) == 0
+
+
+def test_add_to_cart_allows_variant():
+    """s05 的 add_to_cart 对变体商品正常执行。"""
+    s05_remember([VARIANTS["AR-2002"]])
+    result = s05_add_to_cart("AR-2002")
+    assert result.blocked is None
+    assert result.is_error is False
+    assert len(s05_cart) == 1
+    assert s05_cart[0]["product_id"] == "AR-2002"
+
+
+def test_update_cart_blocks_family():
+    """s05 的 update_cart_item 对 family 商品也拦截。"""
+    s05_seen["AR-2000"] = {
+        "id": "AR-2000",
+        "title": "ACME 基础款圆领T恤",
+        "price": 79.0,
+        "in_stock": True,
+        "options": {"尺码": ["S", "M", "L"]},
+    }
+    result = s05_update("AR-2000", 2)
+    assert result.blocked == "options"
