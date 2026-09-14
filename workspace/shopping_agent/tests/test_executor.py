@@ -18,9 +18,7 @@ def config():
 
 @pytest.fixture
 def executor(backend, config, session, state):
-    return ShoppingToolExecutor(
-        backend=backend, config=config, session=session, state=state
-    )
+    return ShoppingToolExecutor(backend=backend, config=config, session=session, state=state)
 
 
 # ── 搜索 ──────────────────────────────────────────────────────────────
@@ -91,9 +89,7 @@ async def test_cart_membership_alone_grants_update_and_remove(backend, config, s
     backend.cart_items["p-200"] = CartItem(
         product_id="p-200", title="Two-Burner Camp Stove", price=64.5, quantity=2
     )
-    executor = ShoppingToolExecutor(
-        backend=backend, config=config, session=session, state=state
-    )
+    executor = ShoppingToolExecutor(backend=backend, config=config, session=session, state=state)
     update = await executor.execute("update_cart_item", {"product_id": "p-200", "quantity": 4})
     assert not update.is_error and update.blocked is None
     remove = await executor.execute("remove_from_cart", {"product_id": "p-200"})

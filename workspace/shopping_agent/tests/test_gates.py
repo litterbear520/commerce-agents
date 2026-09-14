@@ -11,7 +11,6 @@ from shopping_agent.gates import (
     provenance_error,
 )
 
-
 # ── check_provenance ───────────────────────────────────────────────
 
 
@@ -26,9 +25,7 @@ def test_unseen_id_is_held():
 def test_seen_id_passes():
     # 见过的 ID 放行（返回 None）
     state = ShoppingSessionState()
-    state.seen_products["p-100"] = Product(
-        product_id="p-100", title="帐篷", price=149.0
-    )
+    state.seen_products["p-100"] = Product(product_id="p-100", title="帐篷", price=149.0)
     result = check_provenance(state, "p-100")
     assert result is None
 
@@ -78,9 +75,7 @@ def test_variant_id_passes_options_check():
 def test_plain_product_passes_options_check():
     # 普通商品（没有 options）通过选项门控
     state = ShoppingSessionState()
-    state.seen_products["p-100"] = Product(
-        product_id="p-100", title="帐篷", price=149.0
-    )
+    state.seen_products["p-100"] = Product(product_id="p-100", title="帐篷", price=149.0)
     result = check_options(state, "p-100")
     assert result is None
 
