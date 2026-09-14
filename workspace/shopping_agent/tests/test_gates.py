@@ -1,5 +1,5 @@
 # 门控逻辑的单元测试（包版本，直接测 gate 函数）
-# Stage A 版本在 test_gates_stage_a.py
+# Stage A 版本在 tests/test_gates.py
 # test_executor.py 通过执行器间接测了同样的场景；这里测门控函数本身
 
 from shopping_agent import Product, ShoppingSessionState

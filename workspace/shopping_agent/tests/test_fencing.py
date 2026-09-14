@@ -1,5 +1,5 @@
 # 围栏和清洗逻辑的单元测试（包版本）
-# Stage A 版本在 test_fencing_stage_a.py
+# Stage A 版本在 tests/test_fencing.py
 
 from shopping_agent.fencing import STOREFRONT_FENCE, Fence
 
