@@ -38,7 +38,7 @@ _SPECIAL_TOKEN = re.compile(
 
 
 class Fence:
-    """包裹第三方内容的标签，以及静态提示词里关于它的信任说明。"""
+    """用 XML 标签包裹第三方内容，并提供系统提示词中的信任说明。"""
 
     # sanitize_text 是 Fence 的方法（而不是独立函数），因为清洗需要知道围栏标签名
 
@@ -52,7 +52,7 @@ class Fence:
         )
 
     def sanitize_text(self, text: str) -> str:
-        """清洗不可信文本，返回结果不超过 max_chars（如指定）。"""
+        """清洗不可信文本。"""
         # 步骤：
         # 1. NFKC 标准化 — 全角字符、连字符等统一成标准形式
         # 2. 删除零宽字符 — 防止在标签里塞隐形字符绕过匹配
@@ -87,7 +87,7 @@ class Fence:
         return value  # 数字、布尔值等原样返回
 
     def fence_payload(self, data: dict | list | str) -> str:
-        """清洗后的载荷包裹在围栏标签内。字符串叶子就地清洗。"""
+        """清洗数据并用围栏标签包裹。字符串字段会逐个清洗。"""
         # 递归清洗每个叶子节点
         sanitized = self.sanitize_value(data)
         if isinstance(sanitized, str):
@@ -215,8 +215,8 @@ seen_products: dict[str, dict] = {}  # 记录本次会话中工具返回过的�
 # ── ToolOutcome ─────────────────────────────────────────────────────
 # 项目中对应 commerce_common/streaming.py 的 ToolOutcome
 class ToolOutcome:
-    """一次工具调用的产物：result_text 给模型，events 给宿主。
-    blocked 指出拦截的门控名；is_error 标记失败。"""
+    """工具调用的返回结果：text 给模型看，events 给调用方。
+    blocked 记录哪个门控拦截了调用；is_error 表示失败。"""
 
     def __init__(self, text: str, is_error: bool = False, blocked: str | None = None):
         self.text = text
@@ -248,7 +248,7 @@ MAX_CART_LINES = 100
 
 
 def check_provenance(product_id: str) -> ToolOutcome | None:
-    """product_id 没有会话来源记录时返回 held 结果，否则返回 None。"""
+    """product_id 在本次会话中没有来源记录时返回 held，否则返回 None。"""
     if product_id in seen_products:
         return None
     return ToolOutcome.held(
@@ -260,7 +260,7 @@ def check_provenance(product_id: str) -> ToolOutcome | None:
 
 
 def check_options(product_id: str) -> ToolOutcome | None:
-    """product_id 对应的记录是还有选项需要选择的 family 时返回 held 结果；
+    """product_id 是还有选项要选的 family 商品时返回 held；
     购物车只接受它的变体。"""
     product = seen_products.get(product_id)
     if product is None or not product.get("options"):

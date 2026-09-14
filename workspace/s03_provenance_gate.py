@@ -61,8 +61,8 @@ seen_products: dict[str, dict] = {}  # 记录本次会话中工具返回过的�
 # ── ToolOutcome ─────────────────────────────────────────────────────
 # 项目中对应 commerce_common/streaming.py 的 ToolOutcome
 class ToolOutcome:
-    """一次工具调用的产物：result_text 给模型，events 给宿主。
-    blocked 指出拦截的门控名；is_error 标记失败。"""
+    """工具调用的返回结果：text 给模型看，events 给调用方。
+    blocked 记录哪个门控拦截了调用；is_error 表示失败。"""
 
     def __init__(self, text: str, is_error: bool = False, blocked: str | None = None):
         self.text = text
@@ -89,7 +89,7 @@ PROVENANCE_GATE = "provenance"
 
 
 def check_provenance(product_id: str) -> ToolOutcome | None:
-    """product_id 没有会话来源记录时返回 held 结果，否则返回 None。"""
+    """product_id 在本次会话中没有来源记录时返回 held，否则返回 None。"""
     if product_id in seen_products:
         return None
     return ToolOutcome.held(
