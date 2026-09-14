@@ -1,4 +1,4 @@
-"""购物 agent 的领域模型：后端返回的数据结构，以及会话中门控和富化读取的记录。"""
+"""购物 agent 的数据模型：后端返回的数据结构，以及门控和信息补全所用的会话记录。"""
 # 项目中对应 shopping-agent/core/shopping_agent/types.py
 # 当前只包含到 Step 06 用到的类型，Order / Policy 等到 Step 13 再加
 
@@ -31,7 +31,7 @@ def remember(records: dict[str, RecordT], key: str, value: RecordT) -> None:
 class Product(BaseModel):
     """一条商品目录记录，有三种形态。
 
-    plain：直接购买。family：携带 ``options``（每个选项和它的可选值），
+    plain：直接购买。family：带有 ``options``（每个选项和它的可选值），
     搜索会返回它但购物车拒绝它；它的 ``price`` 是最低有货变体的价格，
     ``in_stock`` 在任意变体有货时为 True。variant：出现在 family 的
     ``ProductDetails.variants`` 列表中，有自己的 id、价格和库存，
@@ -58,7 +58,7 @@ class Product(BaseModel):
 
     @property
     def has_options(self) -> bool:
-        """family 商品返回 True：购物车应接受它的某个变体。"""
+        """family 商品返回 True：购物车只接受它的变体。"""
         return bool(self.options)
 
 
@@ -86,7 +86,7 @@ class SearchFilters(BaseModel):
 
 
 class CartItem(BaseModel):
-    """``quantity`` 以售卖单位计数（一件、一晚、一个座位）。"""
+    """``quantity`` 按整件计数（一件、一晚、一个座位）。"""
 
     product_id: str
     title: str
@@ -125,8 +125,8 @@ class ShoppingSessionContext(BaseModel):
 
 
 class ShoppingSessionState(BaseModel):
-    """服务端为会话持有的状态。``seen_products`` 是溯源记录：
-    购物车写操作只接受其中的 id，展示型工具调用从中补全商品信息。"""
+    """服务端为每个会话维护的状态。``seen_products`` 是溯源记录：
+    购物车写操作只接受其中的 id，展示型工具调用时从中补全商品信息。"""
 
     seen_products: dict[str, Product] = Field(default_factory=dict)
 
