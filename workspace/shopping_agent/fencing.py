@@ -60,7 +60,7 @@ class Fence:
         )
 
     def sanitize_text(self, text: str) -> str:
-        """清洗不可信文本。"""
+        # 清洗不可信文本
         text = unicodedata.normalize("NFKC", text)
         text = _INVISIBLE.sub("", text)
         text = _CONTROL.sub(" ", text)

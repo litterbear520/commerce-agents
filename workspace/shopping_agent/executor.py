@@ -24,7 +24,7 @@ Handler = Callable[[dict[str, Any]], Awaitable[ToolOutcome]]
 
 
 class ShoppingToolExecutor:
-    """一个会话的工具执行器。"""
+    # 一个会话的工具执行器
 
     def __init__(
         self,
@@ -53,10 +53,8 @@ class ShoppingToolExecutor:
     # ── execute / dispatch ───────────────────────────────────────────
 
     async def execute(self, name: str, tool_input: dict[str, Any] | None) -> ToolOutcome:
-        """执行一次工具调用，永远不会抛异常。
-
-        分级异常处理：领域异常（Unavailable / NotOffered）→ 兜底 "暂时不可用"。
-        """
+        # 执行一次工具调用，永远不会抛异常
+        # 分级异常处理：领域异常（Unavailable / NotOffered）→ 兜底 "暂时不可用"
         try:
             return await self.dispatch(name, dict(tool_input or {}))
         except Exception as error:

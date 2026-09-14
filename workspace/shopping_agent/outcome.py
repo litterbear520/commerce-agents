@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 
 
@@ -24,11 +23,6 @@ class ToolOutcome:
     def held(cls, gate: str, text: str) -> ToolOutcome:
         # held：操作被门控搁置，不是错误，模型可以按提示恢复
         return cls(text, blocked=gate)
-
-    @classmethod
-    def ok(cls, data: dict | list) -> ToolOutcome:
-        # 便捷方法：把 dict/list 序列化为 JSON 字符串
-        return cls(json.dumps(data, ensure_ascii=False))
 
     @property
     def refused(self) -> bool:

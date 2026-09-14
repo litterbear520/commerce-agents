@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ShoppingAgentConfig(BaseModel):
-    """所有可调参数集中在一个模型里，``extra="forbid"`` 让拼写错误在构造时就报错。"""
+    # 所有可调参数集中在一个模型里，extra="forbid" 让拼写错误在构造时就报错
 
     model_config = ConfigDict(extra="forbid")
 
