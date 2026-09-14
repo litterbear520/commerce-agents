@@ -15,12 +15,12 @@ class ShoppingAgentConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # ── 身份（写入提示词）────────────────────────────────────────────
-    brand_name: str = "the store"
-    assistant_name: str = "the shopping assistant"
-    brand_voice: str = "warm, concise, and plain about trade-offs"
+    brand_name: str = "ACME 商店"
+    assistant_name: str = "购物助手"
+    brand_voice: str = "热情、简洁，坦诚说明优缺点"
 
     # ── 模型 ────────────────────────────────────────────────────────
-    model: str = "claude-sonnet-5"
+    model: str = "deepseek-v4-flash"
     max_tokens: int = 2048
     max_tool_iterations: int = 8
 
