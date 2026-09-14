@@ -52,7 +52,7 @@ class Fence:
         )
 
     def sanitize_text(self, text: str) -> str:
-        """清洗不可信文本。"""
+        # 清洗不可信文本
         # 步骤：
         # 1. NFKC 标准化 — 全角字符、连字符等统一成标准形式
         # 2. 删除零宽字符 — 防止在标签里塞隐形字符绕过匹配
@@ -87,7 +87,7 @@ class Fence:
         return value  # 数字、布尔值等原样返回
 
     def fence_payload(self, data: dict | list | str) -> str:
-        """清洗数据并用围栏标签包裹。字符串字段会逐个清洗。"""
+        """清洗数据并用围栏标签包裹。"""
         # 递归清洗每个叶子节点
         sanitized = self.sanitize_value(data)
         if isinstance(sanitized, str):
@@ -182,10 +182,6 @@ class ToolOutcome:
         self.blocked = blocked
 
     @classmethod
-    def ok(cls, data: dict | list) -> "ToolOutcome":
-        return cls(json.dumps(data, ensure_ascii=False))
-
-    @classmethod
     def error(cls, text: str) -> "ToolOutcome":
         return cls(text, is_error=True)
 
@@ -214,7 +210,7 @@ def check_provenance(product_id: str) -> ToolOutcome | None:
 
 # ── 记录已见商品 ────────────────────────────────────────────────────
 def remember_products(products: list[dict]) -> None:
-    """把工具返回的商品记入 seen_products。"""
+    # 把工具返回的商品记入 seen_products
     for p in products:
         seen_products[p["id"]] = p
 
@@ -350,7 +346,7 @@ tools = [
 
 
 def search_products(query: str, limit: int = 5) -> ToolOutcome:
-    """在假商品列表里做简单的关键词匹配。结果用围栏包裹。"""
+    # 在假商品列表里做简单的关键词匹配。结果用围栏包裹
     query_lower = query.lower()
     results = [p for p in PRODUCTS if query_lower in p["title"].lower()]
     results = results[:limit]
@@ -360,7 +356,7 @@ def search_products(query: str, limit: int = 5) -> ToolOutcome:
 
 
 def get_product_details(product_id: str) -> ToolOutcome:
-    """按 product_id 查找商品，返回完整信息。结果用围栏包裹。"""
+    # 按 product_id 查找商品，返回完整信息。结果用围栏包裹
     for p in PRODUCTS:
         if p["id"] == product_id:
             remember_products([p])
@@ -370,13 +366,13 @@ def get_product_details(product_id: str) -> ToolOutcome:
 
 
 def get_cart() -> ToolOutcome:
-    """返回当前购物车内容和小计。"""
+    # 返回当前购物车内容和小计
     subtotal = sum(item["price"] * item["quantity"] for item in cart)
-    return ToolOutcome.ok({"items": cart, "subtotal": subtotal})
+    return ToolOutcome(json.dumps({"items": cart, "subtotal": subtotal}, ensure_ascii=False))
 
 
 def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
-    """把商品加入购物车。门控：来源检查 + 库存检查。"""
+    # 把商品加入购物车。门控：来源检查 + 库存检查
     # 门控：来源检查
     if held := check_provenance(product_id):
         return held
@@ -388,13 +384,16 @@ def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] += quantity
-            return ToolOutcome.ok(
-                {
-                    "ok": True,
-                    "product_id": product_id,
-                    "title": product["title"],
-                    "quantity": item["quantity"],
-                }
+            return ToolOutcome(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "product_id": product_id,
+                        "title": product["title"],
+                        "quantity": item["quantity"],
+                    },
+                    ensure_ascii=False,
+                )
             )
     # 新增一行
     cart.append(
@@ -405,28 +404,37 @@ def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
             "quantity": quantity,
         }
     )
-    return ToolOutcome.ok(
-        {"ok": True, "product_id": product_id, "title": product["title"], "quantity": quantity}
+    return ToolOutcome(
+        json.dumps(
+            {"ok": True, "product_id": product_id, "title": product["title"], "quantity": quantity},
+            ensure_ascii=False,
+        )
     )
 
 
 def update_cart_item(product_id: str, quantity: int) -> ToolOutcome:
-    """修改购物车中已有商品的数量。门控：来源检查。"""
+    # 修改购物车中已有商品的数量。门控：来源检查
     if held := check_provenance(product_id):
         return held
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] = quantity
-            return ToolOutcome.ok({"ok": True, "product_id": product_id, "quantity": quantity})
+            return ToolOutcome(
+                json.dumps(
+                    {"ok": True, "product_id": product_id, "quantity": quantity}, ensure_ascii=False
+                )
+            )
     return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 
 def remove_from_cart(product_id: str) -> ToolOutcome:
-    """从购物车中移除商品。"""
+    # 从购物车中移除商品
     for i, item in enumerate(cart):
         if item["product_id"] == product_id:
             removed = cart.pop(i)
-            return ToolOutcome.ok({"ok": True, "removed": removed["title"]})
+            return ToolOutcome(
+                json.dumps({"ok": True, "removed": removed["title"]}, ensure_ascii=False)
+            )
     return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 

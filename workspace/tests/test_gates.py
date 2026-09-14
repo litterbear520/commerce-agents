@@ -205,7 +205,7 @@ async def test_add_to_cart_rejects_at_limit():
     s05_cart.append({"product_id": "AR-1104", "title": "键盘", "price": 99.0, "quantity": 24})
     result = await s05_add_to_cart("AR-1104", quantity=1)
     assert result.is_error is True
-    assert "per-item limit" in result.text
+    assert "单品上限" in result.text
 
 
 async def test_add_to_cart_rejects_cart_full():
@@ -215,7 +215,7 @@ async def test_add_to_cart_rejects_cart_full():
         s05_cart.append({"product_id": f"FAKE-{i}", "title": "x", "price": 1.0, "quantity": 1})
     result = await s05_add_to_cart("AR-1104")
     assert result.is_error is True
-    assert "full" in result.text
+    assert "已满" in result.text
 
 
 async def test_update_cart_caps_quantity():
