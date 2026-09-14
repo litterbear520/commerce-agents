@@ -355,10 +355,10 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [ ] 为 `shopping-agent/core/` 写 `pyproject.toml`：包名 `shopping-agent-core`，版本 `0.1.0.dev0`
-- [ ] 写根目录 `requirements.txt`：目前只有一个 `-e ./shopping-agent/core` 可编辑安装 + 依赖精确 pin 版本（后续每加一个包就在这里加一行，最终到 7 个）
-- [ ] 写 `requirements-dev.txt`：`-r requirements.txt` + pytest + ruff
-- [ ] 写 `scripts/install.sh`：检查 venv → `pip install -r requirements-dev.txt`
+- [x] 为 `shopping-agent/core/` 写 `pyproject.toml`：包名 `shopping-agent-core`，版本 `0.1.0.dev0`
+- [x] 写根目录 `requirements.txt`：目前只有一个 `-e ./shopping-agent/core` 可编辑安装 + 依赖精确 pin 版本（后续每加一个包就在这里加一行，最终到 7 个）
+- [x] 写 `requirements-dev.txt`：`-r requirements.txt` + pytest + ruff
+- [x] 写 `scripts/install.sh`：检查 venv → `pip install -r requirements-dev.txt`
 
 #### 验证
 
