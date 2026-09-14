@@ -88,7 +88,7 @@ PROVENANCE_GATE = "provenance"
 
 
 def check_provenance(product_id: str) -> ToolOutcome | None:
-    """检查 product_id 是否在本次会话中被工具返回过。没见过则拦截。"""
+    """product_id 没有会话来源记录时返回 held 结果，否则返回 None。"""
     if product_id in seen_products:
         return None
     return ToolOutcome.held(
