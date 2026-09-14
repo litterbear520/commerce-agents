@@ -3,6 +3,7 @@
 执行器、门控、提示词从各自的子模块导入。
 """
 
+from .backend import NotOffered, StorefrontBackend, Unavailable
 from .types import (
     Cart,
     CartItem,
@@ -16,9 +17,12 @@ from .types import (
 __all__ = [
     "Cart",
     "CartItem",
+    "NotOffered",
     "Product",
     "ProductDetails",
     "SearchFilters",
     "ShoppingSessionContext",
     "ShoppingSessionState",
+    "StorefrontBackend",
+    "Unavailable",
 ]
