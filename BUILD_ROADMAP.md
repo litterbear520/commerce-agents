@@ -329,10 +329,10 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [ ] 提取 `tools/registry.py`：`build_tools()` 函数返回完整的工具列表，每个工具是一个 dict（name、description、input_schema）。工具列表的顺序是固定的
-- [ ] 提取 `executor.py`：`ShoppingToolExecutor` — handlers 字典映射工具名到处理方法，`dispatch()` 做分派，`execute()` 包裹分级异常处理（InvalidArguments → domain_error → 兜底 "unavailable"，从具体到通用逐层捕获）
-- [ ] 提取 `gates.py`：`check_provenance()`、`check_options()`、`gated_add_to_cart()`
-- [ ] 提取 `serialization.py`：工具返回值的格式化（`search_result_text()`、`cart_payload()` 等）
+- [x] 提取 `tools/registry.py`：`build_tools()` 函数返回完整的工具列表，每个工具是一个 dict（name、description、input_schema）。工具列表的顺序是固定的
+- [x] 提取 `executor.py`：`ShoppingToolExecutor` — handlers 字典映射工具名到处理方法，`dispatch()` 做分派，`execute()` 包裹分级异常处理（InvalidArguments → domain_error → 兜底 "unavailable"，从具体到通用逐层捕获）
+- [x] 提取 `gates.py`：`check_provenance()`、`check_options()`、`gated_add_to_cart()`
+- [x] 提取 `serialization.py`：工具返回值的格式化（`search_result_text()`、`cart_payload()` 等）
 
 #### 验证
 
