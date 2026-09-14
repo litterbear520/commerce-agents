@@ -267,12 +267,12 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [ ] 在商品模型中区分三种形态：plain（直接购买）、family（有 `options` 字典）、variant（有 `option_values` + `variant_of`）
-- [ ] 实现选项门控：`add_to_cart` 如果收到一个 family ID，返回 held，提示「这个商品有选项，请让顾客选择具体的 …」
-- [ ] 实现数量上限：`max_quantity_per_item`（默认 24）、`max_cart_lines`（默认 100）
-- [ ] 把工具循环改成 `async`（为 Web 服务做准备——后面 FastAPI 需要异步处理多个并发请求）
-- [ ] 加购物车写锁（per session 的 `asyncio.Lock`）：防止并发请求绕过上限
-- [ ] 补 `test_gates.py`：family ID 被拦截、上限拦截、并发添加不突破上限、购物车已满
+- [x] 在商品模型中区分三种形态：plain（直接购买）、family（有 `options` 字典）、variant（有 `option_values` + `variant_of`）
+- [x] 实现选项门控：`add_to_cart` 如果收到一个 family ID，返回 held，提示「这个商品有选项，请让顾客选择具体的 …」
+- [x] 实现数量上限：`max_quantity_per_item`（默认 24）、`max_cart_lines`（默认 100）
+- [x] 把工具循环改成 `async`（为 Web 服务做准备——后面 FastAPI 需要异步处理多个并发请求）
+- [x] 加购物车写锁（per session 的 `asyncio.Lock`）：防止并发请求绕过上限
+- [x] 补 `test_gates.py`：family ID 被拦截、上限拦截、并发添加不突破上限、购物车已满
 
 #### 验证
 
