@@ -29,12 +29,10 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ---
 
 
-
 ## Stage A · 一个文件，一段对话
 
 > 从零到一个能搜索商品、加购物车、拦截幻觉的购物 agent。
 > 全部代码还在一两个文件里，还没拆包。
-
 
 
 ### 00 · 第一次 API 调用
@@ -62,7 +60,6 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 规则 1 — 一个模型拥有对话。框架的路由和编排在这个项目里是多余的中间层；直接调 API 能让你完全控制发给模型的每个字节。
 
 ---
-
 
 
 ### 01 · 第一个工具：搜索商品
@@ -98,7 +95,6 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ---
 
 
-
 ### 02 · 加更多工具：详情和购物车
 
 **起点**：能搜索了，但不能看详情、不能加购物车。
@@ -125,7 +121,6 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 参考 `tools/registry.py` 里 `add_to_cart` 的 description：不只说「加入购物车」，还说了前置条件（先看详情确认库存和选项）。
 
 ---
-
 
 
 ### 02.5 · 把你试过的对话整理成任务集
@@ -159,7 +154,6 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 升级评估套件时不用改词。
 
 ---
-
 
 
 ### 03 · 第一个 bug：模型幻觉出商品 ID
@@ -204,7 +198,6 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 参考 `commerce-common/commerce_common/streaming.py` 的 `ToolOutcome` 类。这就是规则 4 — 写操作必须校验数据来源。
 
 ---
-
 
 
 ### 04 · 第二个 bug：商品标题里的提示词注入
@@ -267,13 +260,12 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ---
 
 
-
 ### 05 · 家族商品与选项门控
 
 **起点**：有些商品有选项（尺寸、颜色），不能直接加购物车——要先选变体。
 模型不知道这个规则，会直接用家族 ID 加购物车。
 
-**做什么**：
+#### 做什么
 
 - [ ] 在商品模型中区分三种形态：plain（直接购买）、family（有 `options` 字典）、variant（有 `option_values` + `variant_of`）
 - [ ] 实现选项门控：`add_to_cart` 如果收到一个 family ID，返回 held，提示「这个商品有选项，请让顾客选择具体的 …」
@@ -282,18 +274,21 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 - [ ] 加购物车写锁（per session 的 `asyncio.Lock`）：防止并发请求绕过上限
 - [ ] 补 `test_gates.py`：family ID 被拦截、上限拦截、并发添加不突破上限、购物车已满
 
-**验证**：`pytest test_gates.py`（单元测试）。对话中尝试把一个 family 商品加入购物车 → 被拦截并提示选择变体；
+#### 验证
+
+`pytest test_gates.py`（单元测试）。对话中尝试把一个 family 商品加入购物车 → 被拦截并提示选择变体；
 加满 24 件同一商品后再加 → 被数量上限拦截。
 
-**当前限制**：`asyncio.Lock` 只在单进程内有效。多进程或多实例部署时，上限要由后端的原子操作
+> **当前限制**：`asyncio.Lock` 只在单进程内有效。多进程或多实例部署时，上限要由后端的原子操作
 （数据库约束、条件更新）保证——Stage H 会回到这里。
 
-**设计决策**：为什么 family/variant 的概念在第 6 步就要出现？因为它直接影响购物车门控——
+#### 设计决策
+
+为什么 family/variant 的概念在第 6 步就要出现？因为它直接影响购物车门控——
 没有这个区分，门控规则就不完整。参考 `shopping-agent/core/shopping_agent/gates.py` 的
 `check_options()` 和 `shopping-agent/core/shopping_agent/types.py` 的 `Product` 模型。
 
 ---
-
 
 
 ## Stage B · 代码膨胀，该拆了
@@ -302,12 +297,11 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 > 这个阶段的目标不是加新功能，而是把代码拆成可维护的包结构，并建立测试基础设施。
 
 
-
 ### 06 · 拆文件：类型 + 后端 ABC + 配置
 
 **起点**：`workspace/` 里的脚本越来越大，改一个地方怕破坏另一个地方。
 
-**做什么**：
+#### 做什么
 
 - [ ] 创建 `shopping-agent/core/` 包结构
 - [ ] 提取 `types.py`：`Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`、`ShoppingSessionContext`、`ShoppingSessionState`（包含 `seen_products`）— 只包含到目前为止用到的类型，`Order`、`Policy` 等到 Step 13 再加
@@ -315,9 +309,13 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 - [ ] 提取 `config.py`：`ShoppingAgentConfig` — 所有可调参数（模型名、max_tokens、迭代上限、购物车上限、系统开关）放在一个 Pydantic 模型里，`extra="forbid"` 让拼写错误在构造时就报错
 - [ ] 提取 `fencing.py`：定义 `STOREFRONT_FENCE`
 
-**验证**：代码能 `import shopping_agent` 且之前的对话流程不变。
+#### 验证
 
-**设计决策**：`StorefrontBackend` 为什么是抽象类而不是协议（Protocol）？因为它最终有 11 个方法，
+代码能 `import shopping_agent` 且之前的对话流程不变。
+
+#### 设计决策
+
+`StorefrontBackend` 为什么是抽象类而不是协议（Protocol）？因为它最终有 11 个方法，
 实现者需要明确知道自己少了哪个——抽象类在实例化时就报错，Protocol 只在调用时才发现缺方法。
 参考 `shopping-agent/core/shopping_agent/backend.py` — 注意 `checkout_handoff` 和
 `get_disclosure` 是可选方法（有默认实现），因为不是所有店都需要。
@@ -325,44 +323,50 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ---
 
 
-
 ### 07 · 拆执行器和工具注册
 
 **起点**：工具定义（JSON Schema）和工具执行（if/elif 分派）还混在一起。
 
-**做什么**：
+#### 做什么
 
 - [ ] 提取 `tools/registry.py`：`build_tools()` 函数返回完整的工具列表，每个工具是一个 dict（name、description、input_schema）。工具列表的顺序是固定的
 - [ ] 提取 `executor.py`：`ShoppingToolExecutor` — handlers 字典映射工具名到处理方法，`dispatch()` 做分派，`execute()` 包裹分级异常处理（InvalidArguments → domain_error → 兜底 "unavailable"，从具体到通用逐层捕获）
 - [ ] 提取 `gates.py`：`check_provenance()`、`check_options()`、`gated_add_to_cart()`
 - [ ] 提取 `serialization.py`：工具返回值的格式化（`search_result_text()`、`cart_payload()` 等）
 
-**验证**：`from shopping_agent.executor import ShoppingToolExecutor` 正常工作。包的顶层
+#### 验证
+
+`from shopping_agent.executor import ShoppingToolExecutor` 正常工作。包的顶层
 `shopping_agent/__init__.py` 只导出外部调用方需要的类型、后端抽象类、配置和序列化器；
 执行器、门控、提示词都从各自的子模块导入——参考它的 docstring。
 
-**设计决策**：为什么 `registry.py` 返回的工具列表顺序是固定的？因为规则 2 — 静态字节相同才能
+#### 设计决策
+
+为什么 `registry.py` 返回的工具列表顺序是固定的？因为规则 2 — 静态字节相同才能
 命中 prompt cache。工具列表是系统提示词的一部分，顺序变了就是不同的字节，缓存失效。
 参考 `shopping-agent/core/shopping_agent/tools/registry.py` 的 `build_tools()`。
 
 ---
 
 
-
 ### 08 · 变成包：pyproject.toml 与 requirements
 
 **起点**：文件拆好了但还是零散的文件，不是一个可安装的 Python 包。
 
-**做什么**：
+#### 做什么
 
 - [ ] 为 `shopping-agent/core/` 写 `pyproject.toml`：包名 `shopping-agent-core`，版本 `0.1.0.dev0`
 - [ ] 写根目录 `requirements.txt`：目前只有一个 `-e ./shopping-agent/core` 可编辑安装 + 依赖精确 pin 版本（后续每加一个包就在这里加一行，最终到 7 个）
 - [ ] 写 `requirements-dev.txt`：`-r requirements.txt` + pytest + ruff
 - [ ] 写 `scripts/install.sh`：检查 venv → `pip install -r requirements-dev.txt`
 
-**验证**：`bash scripts/install.sh dev && ruff check . && pytest --co -q`（收集测试但不运行）。
+#### 验证
 
-**设计决策**：为什么所有包共享一个 `requirements.txt` 而不是各管各的？因为这是一个 monorepo——
+`bash scripts/install.sh dev && ruff check . && pytest --co -q`（收集测试但不运行）。
+
+#### 设计决策
+
+为什么所有包共享一个 `requirements.txt` 而不是各管各的？因为这是一个 monorepo——
 所有包的版本必须对齐。精确 pin 版本 + 包名不在 PyPI 注册 = 防止供应链攻击
 （参考 `.github/workflows/ci.yml` 的 `no-pypi-fallback` job）。
 `pytest.ini` 和 `ruff.toml` 已经在 Step 04 创建，这里不需要重复。
@@ -370,12 +374,11 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ---
 
 
-
 ### 09 · 测试：不想每次都烧 API 费用
 
 **起点**：每次验证改动都要调真实 API，慢、贵、不确定。
 
-**做什么**：
+#### 做什么
 
 - [ ] 在 `commerce-common/commerce_common/testing.py` 里构建测试基础设施：
   - `FakeClient`：按预录顺序依次返回响应的假客户端
@@ -390,10 +393,14 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
   - `test_serialization.py`：精简格式的商品、变体、带选项值的购物车行
 - [ ] 创建 `.github/workflows/ci.yml` 的第一个 job `python`：`ruff check` + `ruff format --check` + `pytest`。Step 29 再加矩阵、供应链检查和 web build
 
-**验证**：`pytest shopping-agent/core/tests/ -v` — 全绿，零 API 调用（单元测试 + 假模型集成测试）。
+#### 验证
+
+`pytest shopping-agent/core/tests/ -v` — 全绿，零 API 调用（单元测试 + 假模型集成测试）。
 推一次提交，看 CI 绿。
 
-**设计决策**：测试跟着能力走，不必等「接口稳定」才写。Step 03 的来源校验、Step 04 的清洗、Step 05 的上限
+#### 设计决策
+
+测试跟着能力走，不必等「接口稳定」才写。Step 03 的来源校验、Step 04 的清洗、Step 05 的上限
 都是确定性的行为约束，写完就应该立刻用测试锁住；这一步补的是**基础设施**——假模型、假后端——
 让执行器和序列化这类依赖模型响应的代码路径也能零 API 测试。接口还在变的部分（比如工具 schema 的字段名）
 测试写在结构层面而不是硬编码字符串，改名时一起改就行。
@@ -410,7 +417,6 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 ---
 
 
-
 ## Stage C · 从能用到好用
 
 > 功能够了，但体验不行。模型返回大段文本而不是卡片；每个对话轮次都要按全价计算 prompt token；
@@ -418,13 +424,12 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 > 这个阶段逐一解决这些问题。
 
 
-
 ### 10 · 系统提示词的静态/动态拆分与缓存
 
 **起点**：每次 API 调用都要发送完整的系统提示词 + 工具列表，token 成本很高。
 Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提是这些内容在每次调用中保持不变。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `prompt.py` 的两段式结构：
   - `build_static_system(config, skills)`：身份、规则、技能索引、工具使用规则、展示规则、信任规则、边界——这些只取决于配置和技能定义，不随请求变化
@@ -437,12 +442,16 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 - [ ] 写 `test_prompt_assembly.py`：系统块结构、时钟渲染、工具缓存控制、滚动断点、消息合并
 
-**验证**：`pytest test_prompt_assembly.py`（单元测试）。观察 API 返回的 `usage` 字段：
+#### 验证
+
+`pytest test_prompt_assembly.py`（单元测试）。观察 API 返回的 `usage` 字段：
 从第二个对话轮次起，`cache_read_input_tokens` 应该覆盖静态系统提示词 + 工具列表的部分；
 `cache_creation_input_tokens` 每个轮次都会有一些——滚动断点把新消息写进缓存——
 但应该远小于读取量。缓存 5 分钟过期，隔久了再聊会重新出现大额 creation。
 
-**设计决策**：缓存是**一段连续前缀**，按 `tools → system → messages` 的顺序匹配，不是三块独立的缓存。
+#### 设计决策
+
+缓存是**一段连续前缀**，按 `tools → system → messages` 的顺序匹配，不是三块独立的缓存。
 三个断点是同一段前缀上的三个检查点：改了工具列表，后面全部失效；改了静态系统提示词，工具缓存还在，
 但系统和消息的缓存失效；改了动态上下文（比如购物车变了），静态系统和工具的缓存还在，但**消息历史的缓存会失效**，
 因为动态块在系统提示词里，排在所有消息之前。官方文档建议把容易变化的内容放在提示词末尾；
@@ -453,13 +462,12 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 ---
 
 
-
 ### 11 · 展示层：模型判断，服务端渲染
 
 **起点**：模型的回复是纯文本。但商品卡片、比较表格、购物计划这些需要结构化 UI。
 如果让模型直接输出 HTML/Markdown，它会编造商品信息、价格漂移、格式不一致。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `commerce-common/commerce_common/presentation.py`：
   - `PresentationComponent`：name + component + payload_model + enrich 钩子
@@ -478,10 +486,14 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 - [ ] 实现 `present_suggestions`（建议芯片）：1-4 个简短建议，清洗后发出，结束当前对话轮次
 - [ ] 写 `test_presentation.py`：payload 验证、enrich 钩子、拒绝映射、price_delta 计算
 
-**验证**：`pytest test_presentation.py`。模型调用 `present_products({picks: [{product_id: "p-1", reason: "..."}]})` →
+#### 验证
+
+`pytest test_presentation.py`。模型调用 `present_products({picks: [{product_id: "p-1", reason: "..."}]})` →
 服务端从 `seen_products` 补全完整商品数据 → 返回 `ui` 事件。
 
-**设计决策**：为什么模型只传 ID 和判断理由，不传商品名称和价格？这就是规则 3 —
+#### 设计决策
+
+为什么模型只传 ID 和判断理由，不传商品名称和价格？这就是规则 3 —
 UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名称、价格、图片等「事实」由服务端
 从数据库填充。这样模型不会编造价格，UI 永远准确。
 参考 `shopping-agent/core/shopping_agent/enrichment.py` 的 `enrich_products()`。
@@ -489,13 +501,12 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 12 · 技能：复杂场景的规则手册
 
 **起点**：简单搜索模型表现不错，但遇到「帮我规划一次露营旅行需要买什么」这种复杂场景，
 模型不知道该分几步、先问什么、怎么组织输出。你需要一种方式给它场景化的规则。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `commerce-common/commerce_common/skills.py`：
   - `Skill`：name + description + body
@@ -512,10 +523,14 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 
 - [ ] 写 `test_skills.py`：frontmatter 解析、技能加载、注册表索引稳定性
 
-**验证**：`pytest test_skills.py`（单元测试）。模型遇到「帮我规划露营要买什么」→ 调用 `load_skill("planning-goals")` →
+#### 验证
+
+`pytest test_skills.py`（单元测试）。模型遇到「帮我规划露营要买什么」→ 调用 `load_skill("planning-goals")` →
 获得分步规则 → 按规则组织输出（模型行为 eval：把这类任务加进任务集，对比加载技能前后的成功率）。
 
-**设计决策**：为什么技能不直接塞进系统提示词？因为 5 个技能正文加起来几千 token，
+#### 设计决策
+
+为什么技能不直接塞进系统提示词？因为 5 个技能正文加起来几千 token，
 大部分对话只用到 0-1 个。放在系统提示词里浪费缓存空间（token 多了缓存也大），
 放在 `load_skill` 工具里按需加载。但技能的一行描述放在提示词索引里，让模型知道什么时候该加载。
 这就是规则 1 ——「按适用频率决定放在哪」。
@@ -523,13 +538,12 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 13 · 售后工具：订单、政策、偏好、履约
 
 **起点**：购物 agent 能搜索和下单了，但售后场景——查订单、看退换政策、获取配送选项——还缺工具，
 也没有对应的技能和展示组件。
 
-**做什么**：
+#### 做什么
 
 - [ ] 在 `types.py` 添加 `Order`、`OrderItem`、`OrderStatus`、`Policy`、`UserPreferences`、`FulfillmentOption`、`CheckoutHandoff`
 - [ ] 在 `backend.py` 添加 5 个新抽象方法：`get_orders`、`get_order`、`search_policies`、`get_preferences`、`get_fulfillment_options`（ABC 从 6 方法扩展到 11 方法）
@@ -541,9 +555,13 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 写 `customer-care` 技能（Step 12 留下的）：售后帮助——状态、退换、损坏
 - [ ] 补充 `test_executor.py`：订单、政策、偏好、履约的测试用例
 
-**验证**：`pytest shopping-agent/core/tests/test_executor.py -v` — 新增的售后工具测试全绿。
+#### 验证
 
-**设计决策**：为什么订单商品要加入 `seen_products` 的来源记录？因为用户说「我想再买一件上次的那个耳机」，
+`pytest shopping-agent/core/tests/test_executor.py -v` — 新增的售后工具测试全绿。
+
+#### 设计决策
+
+为什么订单商品要加入 `seen_products` 的来源记录？因为用户说「我想再买一件上次的那个耳机」，
 模型会从订单历史找到 product_id。如果不把订单商品加入来源记录，购物车门控就会拦截——
 「这个 ID 没在搜索结果里」。`remember_order_items()` 解决了这个问题。
 参考 `shopping-agent/core/shopping_agent/gates.py`。
@@ -551,13 +569,12 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 14 · 数据锚定规则：先查数据再开口
 
 **起点**：用户问「我的订单到哪了」，模型直接说「让我帮你查一下」然后就开始编造信息。
 它应该先调用 `get_orders` 拿到真实数据再回答。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `commerce-common/commerce_common/grounding.py`：
   - `matches_terms_and_cues(text, terms, cues)`：文本里同时出现「意图词」和「线索词」才触发
@@ -570,7 +587,9 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 在循环的第一轮用 `tool_choice: {"type": "tool", "name": "..."}` 强制模型调用该工具
 - [ ] 写 `test_grounding.py`：强制工具选择、优先级、配置开关、词汇表扩展
 
-**验证**：`pytest test_grounding.py`（单元测试）。默认词表是英文的，验证时用英文输入：
+#### 验证
+
+`pytest test_grounding.py`（单元测试）。默认词表是英文的，验证时用英文输入：
 "Can I return these headphones?" → 强制调用 `search_policies` → 拿到退货政策 → 基于政策回答。
 "Is SKU-1234 in stock?" → 强制调用 `get_product_details("SKU-1234")`——目录规则匹配的是 ID 的正则表达式
 （`product_id_patterns`），所以即使是中文句子，只要里面带 ID 也能触发。
@@ -578,14 +597,15 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 两者的区别正是「代码强制查询」和「模型自行决定查询」。要支持中文输入，需要在 `policy_intent_terms` /
 `policy_intent_cues` 里加入中文词汇并补充测试。
 
-**设计决策**：为什么要同时匹配「意图词」和「线索词」而不是只匹配关键词？
+#### 设计决策
+
+为什么要同时匹配「意图词」和「线索词」而不是只匹配关键词？
 因为 "that order looks great" 不应该触发订单查询——它有 "order" 但没有疑问线索。
 而 "where is my order" 同时有意图词 + 线索词（"where" 是 cue），才应该触发。
 参考 `shopping-agent/core/shopping_agent/config.py` 的 `policy_intent_terms` 和
 `policy_intent_cues` 列表。
 
 ---
-
 
 
 ### 15 · 编排器与流式循环
@@ -630,7 +650,9 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 
 - **验证**：`test_turn.py` 的分派用例；对比 16.1 的任务集延迟，首个 UI 帧应明显提前。
 
-**设计决策**：为什么 `EagerDispatcher` 不等整个 response 结束？因为一个 response 里可能有多个
+#### 设计决策
+
+为什么 `EagerDispatcher` 不等整个 response 结束？因为一个 response 里可能有多个
 工具块，`search_products` 平均要几百毫秒，第一个块完整时就执行它，等后面的块流完时结果已经在了。
 但**执行只在参数完整时才发生**（`content_block_stop` 后解析成功）：不完整的 JSON 可能缺少 `filters`
 字段，拿它来执行会得到错误的搜索结果。预览渲染走的是另一条线——用不完整的参数画出「正在挑选 3 个商品」的
@@ -640,14 +662,15 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 15.5 · 最小可体验原型：简易店面（插入步）
 
 **起点**：Stage A-C 全在终端和测试里跑。你还没见过真实用户在浏览器里搜索、加购、
 下单——交互问题（卡片出现的时机、按钮加购和对话加购是否行为一致、刷新后会话还在不在）
 如果等到 Stage E 才暴露，那时后端已经定型了，改起来代价更大。
 
-**做什么**（只做最简单的一条线，完整 UI 和商户门户留给 Stage E）：
+#### 做什么
+
+> 只做最简单的一条线，完整 UI 和商户门户留给 Stage E。
 
 - [ ] 一个 FastAPI 文件：`/api/session`（创建会话，返回 ID）、`/api/chat`（通过 SSE 流出 `stream_turn()` 的事件）、`/api/cart`
 - [ ] 会话先用一个 `dict[str, State]` 存在内存里；用 Step 09 的 `FakeBackend` 或 5 个商品的 mock 当后端
@@ -655,20 +678,21 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 「加购」按钮走同一个执行器和门控（这是 Step 22 的 `direct_add()` 的雏形），不绕过来源校验
 - [ ] 让 2-3 个人各跑一遍 EVALS.md 任务集，记下他们卡在哪
 
-**验证**：浏览器里搜索 → 商品卡 → 加购 → 结算交接完整走通（真实部署验收的最小形态）。
+#### 验证
+
+浏览器里搜索 → 商品卡 → 加购 → 结算交接完整走通（真实部署验收的最小形态）。
 这个页面不会进最终仓库，但它暴露的问题会改变 Stage C 剩余步骤和 Stage E 的做法。
 
-**当前限制**：会话存在内存里、没有认证、只有单进程——每一项在 Stage H 都有对应的替换步骤。
+> **当前限制**：会话存在内存里、没有认证、只有单进程——每一项在 Stage H 都有对应的替换步骤。
 
 ---
-
 
 
 ### 16 · 记忆：跨会话记住用户偏好
 
 **起点**：用户说了「我对坚果过敏」，下次来又要重新说。需要跨会话持久化偏好。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `commerce-common/commerce_common/memory.py`（完整子系统）：
   - **存储协议** `MemoryStore`：`get_facts`、`upsert_facts`、`search_facts`、`delete_fact`、`clear`
@@ -685,15 +709,17 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 实现 `shopping-agent/core/shopping_agent/memory.py`：购物场景的提取模板（什么值得记、什么不记）
 - [ ] 写 `memory-personalization` 技能（Step 12 留下的）：什么时候主动记、什么时候问、怎么处理更正和删除
 
-**验证**：
+#### 验证
 
 - `pytest commerce-common/tests/test_memory_facts.py test_memory_stores.py test_memory_runtime.py`（单元测试）
 - 对话中说「我穿 L 码」→ 下次对话自动显示在上下文里（模型行为 eval：提取是否记住了该记的、漏掉了该漏的）
 - 记忆能被查看、更正、删除——这是 Stage H 的验收项之一，现在就留好 `delete_fact` 和 `clear` 的入口
 
-**当前限制**：`JsonFileMemoryStore` 是单机文件，没有并发写保护；多实例部署换成数据库实现，接口不变。
+> **当前限制**：`JsonFileMemoryStore` 是单机文件，没有并发写保护；多实例部署换成数据库实现，接口不变。
 
-**设计决策**：为什么用一个独立的小模型（haiku）做提取而不是让主模型自己决定存什么？
+#### 设计决策
+
+为什么用一个独立的小模型（haiku）做提取而不是让主模型自己决定存什么？
 因为提取需要看完整对话、决定哪些是偏好哪些是临时信息——这是一个独立的判断任务，
 用成本低的模型跑，不影响主对话的成本和延迟。而且提取在对话轮次结束后异步进行，
 失败了只 log WARNING 不中断服务。
@@ -709,7 +735,6 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ## Stage D · 第二个角色催生共享层
 
 > 你要开始写商户 agent 了。打开购物 agent 的代码，发现 `types.py`（共享类型）、`config.py`、
@@ -718,12 +743,11 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 > 这些模块和购物场景无关，是通用的。直接复制粘贴？不行——规则 6 说「每个机制只定义一次」。
 
 
-
 ### 17 · 提取 commerce_common
 
 **起点**：准备写商户 agent，发现要从 shopping-agent 里复制一半代码。
 
-**做什么**：
+#### 做什么
 
 - [ ] 创建 `commerce-common/` 包，写 `pyproject.toml`
 - [ ] 把以下模块从 shopping-agent 移到 commerce-common：
@@ -747,16 +771,19 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 （类型、后端、两三个读工具、编排器），写到哪里发现在复制购物 agent 的代码，就把那一块搬进
 `commerce_common`。根据实际的重复情况来搬，比按清单机械地搬更能让你看清每块为什么是通用的。
 
-**验证**：`from commerce_common.fencing import Fence`、`from commerce_common.execution import BaseToolExecutor`、
+#### 验证
+
+`from commerce_common.fencing import Fence`、`from commerce_common.execution import BaseToolExecutor`、
 `from commerce_common.memory import MemoryRuntime` 正常工作——`commerce_common` 的包顶层不直接导出任何类，
 它的 docstring 是一张「哪个子模块放什么」的对照表；所有之前的购物 agent 测试仍然通过。
 
-**设计决策**：为什么不从一开始就建 `commerce_common`？因为在只有一个角色时你不知道哪些是通用的、
+#### 设计决策
+
+为什么不从一开始就建 `commerce_common`？因为在只有一个角色时你不知道哪些是通用的、
 哪些是角色特有的。第二个角色的到来才让边界清晰。如果提前抽象，很可能抽错层。
 `commerce-common/commerce_common/__init__.py` 的导出列表就是这个边界的最终形态。
 
 ---
-
 
 
 ### 18 · 商户 agent 核心：只读查询 + 对话编排
@@ -764,7 +791,7 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 **起点**：`commerce_common` 提取完毕，开始构建商户 agent。先做只读部分——查看商品列表、库存、
 业绩快照、订单问题。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `merchant-agent/core/merchant_agent/types.py`：
   - `Listing` / `ListingDetails`：和 `Product` 类似的三形态（plain / family / variant）
@@ -783,9 +810,13 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 
 - [ ] 实现 `MerchantAgent` 的对话编排器 `merchant-agent/runtime-messages-api/merchant_agent_runtime/orchestrator.py` — `turn.py` 是共享的，写编排器的成本很低，而且有了编排器才能通过对话来验证只读工具
 
-**验证**：启动一个简单的测试脚本，对话中问「帮我看看店里有什么」→ `search_listings` 返回围栏数据 → 模型基于真实数据回答。
+#### 验证
 
-**设计决策**：商户 agent 的 `BusinessSnapshot` 为什么允许字段为 `None`？因为不是每个商户都有
+启动一个简单的测试脚本，对话中问「帮我看看店里有什么」→ `search_listings` 返回围栏数据 → 模型基于真实数据回答。
+
+#### 设计决策
+
+商户 agent 的 `BusinessSnapshot` 为什么允许字段为 `None`？因为不是每个商户都有
 所有数据源——新开店可能没有转化率数据。`None` 意味着「没有这个数据」，而 `0` 意味着
 「转化率是零」，两者含义完全不同。模型看到 `None` 会说「暂无数据」而不是「转化率为 0%」。
 参考 `merchant-agent/core/merchant_agent/types.py` 的 `BusinessSnapshot` 注释。
@@ -793,13 +824,12 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 19 · 商户写入：暂存 → 预览 → 审批 → 应用
 
 **起点**：只读商户 agent 能查数据了。但商户需要改价格、调库存、发营销活动。
 和购物车不同，商户操作涉及真金白银——不能让模型直接改数据库。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `merchant-agent/core/merchant_agent/changes.py`：
   - `check_guardrails(kind, items, config)`：检查每批修改是否合规——单批数量上限、受保护字段、价格变动幅度上限（默认 ±20%）、促销折扣深度上限（50%）、补货数量上限（500）、营销预算上限（10000）、重复目标字段
@@ -815,13 +845,15 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 实现 `enrichment.py` 的 `enrich_change_preview()`：嵌入完整的暂存变更记录
 - [ ] 写 5 个商户技能 `merchant-agent/skills/*/SKILL.md`
 
-**验证**：
+#### 验证
 
 - `pytest merchant-agent/core/tests/test_changes.py test_gates.py test_executor.py`
 - 对话中说「把 L-101 的价格从 29.99 改到 34.99」（+16.7%）→ `stage_price_update` → 护栏检查通过 → 返回预览 → 等待 `apply_change`（编排器在 Step 18 已就绪）
 - 对话中说「改到 39.99」（+33.3%）→ 超过默认 `max_price_delta_pct=20` → stage 被拒绝，结果文本告诉模型上限是多少
 
-**设计决策**：为什么 apply 时要在**当前配置**下重新检查护栏，而不是信任 stage 时的检查？
+#### 设计决策
+
+为什么 apply 时要在**当前配置**下重新检查护栏，而不是信任 stage 时的检查？
 因为配置可能在 stage 和 apply 之间被管理员修改了（比如收紧了价格变动上限）。
 重新检查确保应用时仍然合规。这就是规则 4 ——写操作有门控。
 参考 `merchant-agent/core/merchant_agent/changes.py` 的 `ChangeLedger.apply()` 方法。
@@ -829,20 +861,19 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 20 · 商户数据锚定规则与变更跟进提醒
 
 **起点**：商户问「这周业绩怎么样」，模型应该先调用 `get_business_snapshot` 拿到数据再回答，
 不能凭空编数字。问「把上次的修改应用了」，应该先看看有什么待处理的修改。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `merchant-agent/core/merchant_agent/grounding.py`：两条数据锚定规则
   1. **指标规则**：检测到业绩类词汇 + 疑问线索 → 强制调用 `get_business_snapshot`
   2. **队列规则**：检测到变更类词汇 + 祈使线索 + 应用意图 + 本会话还没查看过变更 → 强制调用 `get_pending_changes`
 - [ ] 实现变更跟进提醒：`STAGING_FOLLOWTHROUGH_REMINDER` — 当用户请求了修改但这个对话轮次结束时没有产生 `stage_*` 调用，追加提醒让模型再试一次
 
-**验证**：
+#### 验证
 
 - `pytest merchant-agent/runtime-messages-api/tests/`（假模型集成测试）
 - "How are sales this week?" → 强制调用 `get_business_snapshot` → 基于真实数据回答（词表同样默认是英文的；要支持中文输入需要扩充词表）
@@ -850,13 +881,12 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 21 · 分析委托：工具里面跑一个模型
 
 **起点**：商户问「为什么上周三转化率突然下降」，这需要查询多个数据源、可能写 SQL、
 做交叉分析——单次工具调用搞不定，但又不应该让主对话模型去做这种繁重分析。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `commerce-common/commerce_common/delegation.py`（此前不需要，分析委托是第一个消费者）：
   - `DelegateExtension`：name + description + input_schema + result_model + run
@@ -873,12 +903,14 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
   - 迭代上限 + 超时 + 进度汇报（通过主对话流的 `progress` 事件传给前端）
   - 用一个临时的（**scratch**）`MerchantSessionState` 运行，防止分析过程中看到的商品 ID 被加入主会话的来源记录，从而影响暂存修改的权限
 
-**验证**：
+#### 验证
 
 - `pytest merchant-agent/core/tests/test_analysis.py`
 - `pytest merchant-agent/runtime-messages-api/tests/test_analysis.py`
 
-**设计决策**：为什么分析用独立的模型循环而不是让主模型多调几个工具？
+#### 设计决策
+
+为什么分析用独立的模型循环而不是让主模型多调几个工具？
 
 1. 主模型的 `max_tool_iterations` 是 8，分析可能需要更多轮
 2. 分析的进度应该流式汇报，不阻塞主对话
@@ -898,7 +930,6 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ## Stage E · 加上 Web 界面
 
 > agent 核心完成了，但只有测试能验证它。需要一个真正的 Web 应用——
@@ -906,12 +937,11 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 > 第一个垂直行业（retail）在这里落地。
 
 
-
 ### 22 · 演示宿主：FastAPI + SSE + 会话
 
 **起点**：需要把 agent 包装成 HTTP 服务，让前端能对话。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `examples/demo_common/host.py`：
   - `load_demo_env()`：加载 `.env`（ANTHROPIC_API_KEY 等）
@@ -932,14 +962,18 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 实现 `examples/demo_common/storefront_fixtures.py`：fixture 加载（`load_catalog`、`load_users`、`load_orders`、`load_policies`）、关键词搜索排名、日期锚定
 - [ ] 实现 `examples/demo_common/merchant_fixtures.py`：商户 fixture 加载、指标窗口、护栏辅助
 
-**验证**：`pytest examples/demo_common/tests/` 全绿（假模型集成测试）。`demo_common` 是 `examples/`
+#### 验证
+
+`pytest examples/demo_common/tests/` 全绿（假模型集成测试）。`demo_common` 是 `examples/`
 下的顶层包，`pytest.ini` 把 `examples/` 放进了路径，所以 `from demo_common import ...` 直接可用。
 16.5 的简易原型页面现在可以退役了。
 
-**当前限制**：`SessionStore` 把 state 和 transcript 都放在进程内存里，CAS（比较并交换）只在单进程内有效；
+> **当前限制**：`SessionStore` 把 state 和 transcript 都放在进程内存里，CAS（比较并交换）只在单进程内有效；
 `TrustedHostMiddleware` 只接受本地回环地址；路由不做认证。这三项都是 Stage H 的替换对象。
 
-**设计决策**：为什么会话分成 state + transcript 两部分？因为 state 需要 CAS（compare-and-set，先比较再写入）
+#### 设计决策
+
+为什么会话分成 state + transcript 两部分？因为 state 需要 CAS（compare-and-set，先比较再写入）
 来防止并发覆盖（比如两个浏览器标签页同时操作购物车），而 transcript 只需要追加（消息只增不减）。
 分开存储让两种写模式各自高效。
 参考 `examples/demo_common/sessions.py` 的 `SessionStore` 类。
@@ -947,12 +981,11 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 ---
 
 
-
 ### 23 · 第一个垂直行业：零售
 
 **起点**：宿主框架准备好了，需要一个具体的店铺来跑。
 
-**做什么**：
+#### 做什么
 
 - [ ] 创建 `examples/retail/` 目录结构
 - [ ] 实现 `examples/retail/api/mock_retail.py`：`MockRetail(StorefrontBackend)` — 从 `data/catalog.json` 加载商品，实现 11 个抽象方法
@@ -962,7 +995,7 @@ UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名�
 - [ ] 准备 `examples/retail/data/`：`catalog.json`（含有选项的商品）、`users.json`、`orders.json`、`policies.json`、`memory-seed.json`、`merchant_*.json`
 - [ ] 写 `scripts/run_demo.py`：自动启动 API + 前端、管理端口、检查依赖
 
-**验证**：
+#### 验证
 
 ```bash
 python scripts/run_demo.py retail
@@ -970,22 +1003,23 @@ python scripts/run_demo.py retail
 curl http://localhost:8000/api/health
 ```
 
-**当前限制**：`MockRetail` 的搜索用的是关键词匹配和固定排名，`data/*.json` 是全部数据来源。
+> **当前限制**：`MockRetail` 的搜索用的是关键词匹配和固定排名，`data/*.json` 是全部数据来源。
 接入真实商品目录时，换成你的搜索服务就行——`StorefrontBackend` 的 11 个方法就是需要实现的接口；Stage H 的第一步就是做这件事。
 
-**设计决策**：为什么 retail 用 `JsonFileMemoryStore`（持久化到文件）而其他三个垂直行业用 `InMemoryMemoryStore`？
+#### 设计决策
+
+为什么 retail 用 `JsonFileMemoryStore`（持久化到文件）而其他三个垂直行业用 `InMemoryMemoryStore`？
 因为 retail 是基线示例，需要演示跨重启的记忆持久化。其他行业每次启动重新 seed，方便快速 demo。
 参考 `examples/retail/api/main.py` 和 `examples/travel/api/main.py` 的对比。
 
 ---
 
 
-
 ### 24 · TypeScript 前端：协议层与 SSE 客户端
 
 **起点**：API 跑起来了，用 curl 能对话，但需要真正的 Web UI。
 
-**做什么**：
+#### 做什么
 
 - [ ] 设置 npm workspace：`examples/package.json` — workspaces 指向 `web-shared` + 所有前端
 - [ ] 实现 `examples/web-shared/protocol.ts`：镜像 Python 的 `streaming.py` — `AgentEvent`、`UIBlock`、`UISlotStatus`、`AssistantSegment`、`ChatItem`、`TraceEntry`
@@ -996,9 +1030,13 @@ curl http://localhost:8000/api/health
   - 重试逻辑：失败的流式帧保留为 `retrying` 状态
   - 记忆基线追踪：对话轮次结束 2.5 秒后重新拉取 memory store，检查后台提取的结果
 
-**验证**：`npm ci` 在 `examples/` 下通过，TypeScript 类型检查通过。
+#### 验证
 
-**设计决策**：为什么 `useAgentTurn` 要做 180ms 间隔的逐个渲染，而不是一次性显示所有 UI 块？
+`npm ci` 在 `examples/` 下通过，TypeScript 类型检查通过。
+
+#### 设计决策
+
+为什么 `useAgentTurn` 要做 180ms 间隔的逐个渲染，而不是一次性显示所有 UI 块？
 因为 `ui_partial` → `ui` 的升级是瞬间完成的，如果一次性渲染 5 个商品卡片，用户会觉得什么都没发生
 然后突然全部出现。逐个渲染让每个卡片依次出现，产生「正在为你挑选」的感觉。
 参考 `examples/web-shared/turn.ts` 的 `DRIP_MS` 和 `FAST_DRIP_MS` 常量。
@@ -1006,12 +1044,11 @@ curl http://localhost:8000/api/health
 ---
 
 
-
 ### 25 · 店面 Shell 与生成式组件
 
 **起点**：SSE 客户端能收到事件了，需要渲染成真正的 UI。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `examples/web-shared/storefront/Shell.tsx`：`StoreShell` — 应用栏（品牌、标签页、Activity 按钮、购物袋、头像）、`Composer`（聊天输入框）、侧面板（购物车抽屉）
 - [ ] 实现 `examples/web-shared/Transcript.tsx`：对话视图 — 渲染 `ChatItem[]`（文本、错误、UI 块）
@@ -1025,7 +1062,7 @@ curl http://localhost:8000/api/health
   - 每个组件接收 `GenerativeBlockProps`，渲染 enrich 后的完整数据
 - [ ] 每个 web 应用提供 `/showcase` 页面：用 fixture 数据渲染所有组件，不需要 API key
 
-**验证**：
+#### 验证
 
 ```bash
 python scripts/run_demo.py retail --all
@@ -1033,12 +1070,13 @@ python scripts/run_demo.py retail --all
 # 浏览器打开 http://localhost:3100 — 商户门户（下一步）
 ```
 
-**设计决策**：为什么组件注册表是一个 switch 语句而不是动态注册？因为每个垂直行业的组件集是固定的、
+#### 设计决策
+
+为什么组件注册表是一个 switch 语句而不是动态注册？因为每个垂直行业的组件集是固定的、
 编译时已知的。switch 让 TypeScript 知道所有可能的 `component` 值，未知的走 `UnknownBlock` fallback。
 参考各个垂直行业的 `generative/index.tsx` — 它们除了组件集不同外结构完全一样。
 
 ---
-
 
 
 ### 26 · 商户门户
@@ -1046,7 +1084,7 @@ python scripts/run_demo.py retail --all
 **起点**：店面 UI 完成了。商户 agent 还需要一个操作面板——侧边栏导航、助手聊天区域、
 变更预览卡（带审批/放弃按钮）。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `examples/web-shared/portal/Shell.tsx`：`PortalShell` — 侧边栏（品牌标志、导航项、助手切换、操作者头像），`lg` 以下折叠为顶栏
 - [ ] 实现 `examples/web-shared/portal/merchant.ts`：
@@ -1059,10 +1097,14 @@ python scripts/run_demo.py retail --all
   - `ChangePreviewCard`：暂存变更预览（含 Apply / Discard 按钮）
   - 视图：Home、Catalog、Inventory、Orders
 
-**验证**：`python scripts/run_demo.py retail --all` → 门户端打开，对话中说「把 L-101 价格从 29.99 改到 34.99」→
+#### 验证
+
+`python scripts/run_demo.py retail --all` → 门户端打开，对话中说「把 L-101 价格从 29.99 改到 34.99」→
 出现预览卡 → 点 Apply → 变更应用成功（真实部署验收：审批走的是宿主按钮，不是模型）。
 
-**设计决策**：宿主审批为什么在 `demo_common/merchant.py::change_action()` 里实现而不是在 agent 核心里？
+#### 设计决策
+
+宿主审批为什么在 `demo_common/merchant.py::change_action()` 里实现而不是在 agent 核心里？
 因为审批的交互方式是部署层的决策——demo 用 UI 按钮，SDK 用终端确认，Managed Agents 用平台的 `always_ask`。
 核心只检查 `state.approved_change_ids` 里有没有这个 ID，谁设置的由宿主决定。
 参考 `merchant-agent/core/merchant_agent/gates.py` 的 `check_apply_change()`。
@@ -1076,12 +1118,10 @@ python scripts/run_demo.py retail --all
 ---
 
 
-
 ## Stage F · 扩展验证
 
 > 架构的验证时刻：新增一个行业不该重写核心，新增一条运行路径不该复制执行器。
 > 如果需要复制粘贴大量代码，说明抽象做得不对。
-
 
 
 ### 27 · 第二条和第三条运行路径
@@ -1089,7 +1129,7 @@ python scripts/run_demo.py retail --all
 **起点**：agent 只跑在 Messages API 上。但有些用户想用 Claude Agent SDK（Claude Code CLI），
 有些想用 Anthropic 托管的 Managed Agents。三条路径的核心逻辑必须相同。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `commerce-common/commerce_common/agent_sdk.py`：SDK 运行时的共享基础设施
   - `BaseToolset`：每个对话独立的状态管理，追踪 UI 事件和对话轮次状态
@@ -1119,13 +1159,15 @@ python scripts/run_demo.py retail --all
 - [ ] 实现 `commerce-common/commerce_common/manifest.py`：解析 `agent.yaml` → `/v1/agents` API 请求体
 - [ ] 写 `scripts/deploy_managed_agent.sh`：上传技能 + 解析清单 + 创建 agent（默认 dry-run）
 
-**验证**：
+#### 验证
 
 - `pytest tests/test_consumption_paths.py` — 验证三条路径注册的是同一份工具定义、搜索结果的序列化字节一致、记忆工具行为一致。它**不**证明三条路径的整体行为相同：数据锚定规则、分析委托、记忆提取在三条路径上的差异是有意设计的，详见 `docs/safety.md` 和下面的表
 - `pytest tests/test_role_registries.py` — 验证提示词和工具的确定性
 - `python -m commerce_common.manifest shopping-agent/managed-agents/shopping-agent/agent.yaml --list-skills`
 
-**设计决策**：三条路径的关键差异：
+#### 设计决策
+
+三条路径的关键差异：
 
 
 | 方面       | Messages API           | Agent SDK                     | Managed Agents              |
@@ -1142,13 +1184,12 @@ python scripts/run_demo.py retail --all
 ---
 
 
-
 ### 28 · 更多垂直行业：PresentationExtension 的证明
 
 **起点**：retail 跑通了，但一个行业不能证明架构的通用性。
 每个新行业应该只需要：一个 mock backend + 一个 config + 可选的 PresentationExtension + 前端组件。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `examples/travel/`（ACME Travel，端口 8001/3001/3101）：
   - `PresentationExtension`：`present_itinerary` — 模型传入天/产品/备注，服务端解析行程结构
@@ -1170,7 +1211,7 @@ python scripts/run_demo.py retail --all
   - 前端：`VenueMap`、`FeeBreakdown`、`CheckoutHold`、`WalletPass`、`EventPacingCard`
   - **学到什么**：`executor_class` 参数——当垂直行业需要在核心工具之外添加自己的工具时，继承 `ShoppingToolExecutor` 并扩展 handlers 即可
 
-**验证**：
+#### 验证
 
 ```bash
 python scripts/run_demo.py travel --all    # 旅行
@@ -1180,7 +1221,9 @@ python scripts/run_demo.py entertainment --all  # 演出票务
 
 每个垂直行业都能完整对话、展示行业特有 UI 组件。
 
-**设计决策**：四个垂直行业的扩展点分布总结：
+#### 设计决策
+
+四个垂直行业的扩展点分布总结：
 
 
 | 扩展机制                       | 示例                                                                  | 在哪里                   |
@@ -1203,12 +1246,10 @@ python scripts/run_demo.py entertainment --all  # 演出票务
 ---
 
 
-
 ## Stage G · 验证与交付
 
 > 代码写完不等于项目完成。生产级项目需要：自动化的一致性检查（防止手动更新遗漏）、
 > 端到端冒烟测试（真的能聊天）、CI 流水线（每次提交验证）、插件（让社区使用）、文档。
-
 
 
 ### 29 · 一致性检查与 CI
@@ -1216,7 +1257,7 @@ python scripts/run_demo.py entertainment --all  # 演出票务
 **起点**：项目有 7 个包、5+5 个技能、2 个 agent.yaml、2 个 system.md，它们之间有大量
 必须保持同步的约束。手动维护迟早会漏。
 
-**做什么**：
+#### 做什么
 
 - [ ] 实现 `scripts/check.py`（~794 行）：10 项自动化一致性检查
   1. 技能是否可加载
@@ -1237,19 +1278,20 @@ python scripts/run_demo.py entertainment --all  # 演出票务
   2. **no-pypi-fallback**：验证 7 个包名未在 PyPI 注册 + 单独安装时依赖解析失败（防供应链攻击）
   3. **web**：`npm ci` + `npm run build`（8 个前端应用）
 
-**验证**：
+#### 验证
 
 ```bash
 ruff check . && ruff format --check . && pytest && python scripts/check.py
 python scripts/verify_all.py  # 完整验证（加 deploy dry-run 和 web build）
 ```
 
-**设计决策**：`scripts/check.py` 为什么存在？因为 `system.md` 是从 `prompt.py` 派生的——
+#### 设计决策
+
+`scripts/check.py` 为什么存在？因为 `system.md` 是从 `prompt.py` 派生的——
 如果改了提示词但忘了重新生成 `system.md`，Managed Agents 路径就和 Messages API 路径不一致。
 `check.py` 在 CI 里跑，任何不一致都会阻止合并。这是规则 6（每个机制只定义一次）的执行层。
 
 ---
-
 
 
 ### 30 · 平台接缝与部署
@@ -1257,26 +1299,27 @@ python scripts/verify_all.py  # 完整验证（加 deploy dry-run 和 web build�
 **起点**：目前只跑 Anthropic 直连 API。生产部署可能在 GCP Vertex、AWS Bedrock、Azure Foundry
 或自建网关上。需要确保所有平台都能跑。
 
-**做什么**：
+#### 做什么
 
 - [ ] 写 `docs/deployment.md`：各平台部署指南 — Anthropic API、GCP Vertex AI、AWS Bedrock（Mantle + Invoke）、Microsoft Foundry、自建网关。支持矩阵覆盖三条路径 + 分析委托
 - [ ] 实现 `tests/test_platform_seams.py`：6 种客户端类型（直连、GCP、Bedrock Mantle、Bedrock Invoke、Foundry、网关）× 两个运行时绑定正确
 - [ ] 实现 `tests/test_system_switches.py`：4+4 个系统开关（购物：cart/orders/policies/fulfillment；商户：listing_edits/inventory/pricing/campaigns）的工具移除、提示词变化、数据锚定规则禁用、SDK/MCP 一致性
 - [ ] 实现 `tests/test_search_envelope.py`：搜索结果序列化 — header 在围栏外、payload 在围栏内
 
-**验证**：`pytest tests/ -v` — 全部跨包测试通过。平台接缝测试用占位凭证构造客户端，部署脚本默认 dry-run；
+#### 验证
+
+`pytest tests/ -v` — 全部跨包测试通过。平台接缝测试用占位凭证构造客户端，部署脚本默认 dry-run；
 它们证明的是「客户端绑定正确」，而不是「在那个平台上实际跑通了对话」。`docs/deployment.md` 明确写了仓库里没有
 真实云平台的对话记录——在你选定的平台上用真实凭证跑一遍 `scripts/smoke_chat.py`，才算那个平台的验收。
 
 ---
 
 
-
 ### 31 · 插件：让社区使用
 
 **起点**：项目是一个参考实现，但别人怎么基于它构建自己的 agent？需要一个 Claude Code 插件。
 
-**做什么**：
+#### 做什么
 
 - [ ] 创建 `plugins/commerce-builder/` 目录
 - [ ] 写 `.claude-plugin/marketplace.json`：注册插件到 marketplace
@@ -1294,7 +1337,7 @@ python scripts/verify_all.py  # 完整验证（加 deploy dry-run 和 web build�
   5. `commerce-evals`：评估用例的 JSON schema 和运行模式
   6. `commerce-merchant-operations`：暂存变更合约
 
-**验证**：
+#### 验证
 
 ```bash
 claude plugin marketplace add anthropics/commerce-agents
@@ -1304,12 +1347,11 @@ claude plugin install commerce-builder@claude-commerce-agents
 ---
 
 
-
 ### 32 · 文档与安全
 
 **起点**：代码完成了，但没有文档别人用不了。
 
-**做什么**：
+#### 做什么
 
 - [ ] 写 `docs/safety.md`：由代码执行的安全规则表（每条注明所在模块）+ 仍依赖模型遵守的规则 + 部署者需要负责的部分（认证、凭证、限流、业务规则、支付、记忆中的个人数据、日志脱敏、审批交互方式、护栏参数值）——最后一节就是 Stage H 的任务清单
 - [ ] 写 `docs/backends.md`：6 步接入指南 — 身份/凭证、多步流程、结算交接、带选项的商品、商户写入、缺失数据返回 None
@@ -1319,14 +1361,15 @@ claude plugin install commerce-builder@claude-commerce-agents
 - [ ] 每个包写 `README.md`：这个包是什么、怎么用、接口在哪
 - [ ] 根 `conftest.py` 注释：为什么 p-666 存在、为什么 p-400 有选项
 
-**验证**：`python scripts/verify_all.py` — 完整通过。**参考实现复建完成。**
+#### 验证
+
+`python scripts/verify_all.py` — 完整通过。**参考实现复建完成。**
 
 到这里你复建的是一个参考实现：它的边界在 `docs/safety.md` 的「What a deployment owns」——
 认证、凭证、限流、业务规则、支付、个人数据、日志、审批交互方式都留给部署者。
 下一阶段亲手把这些补上，才是真正达到「生产级」的标准。
 
 ---
-
 
 
 ## Stage H · 生产闭环
@@ -1336,93 +1379,106 @@ claude plugin install commerce-builder@claude-commerce-agents
 > 不能用单元测试代替。
 
 
-
 ### 33 · 接入真实或沙箱后端
 
 **起点**：`MockRetail` 从 JSON 文件读数据、用关键词匹配搜索。现在要换成一个真实的（或沙箱环境的）商品目录、购物车、订单服务。
 
-**做什么**：
+#### 做什么
 
 - [ ] 按 `docs/backends.md` 的六步实现你的 `StorefrontBackend`：身份、多步流程、结算交接、带选项的商品、缺失数据返回 `None`
 - [ ] 后端异常映射成 `domain_error`，让工具结果告诉模型发生了什么，而不是 500
 - [ ] 在 EVALS.md 任务集上跑真后端 + 真模型，对比 mock 时的成功率——真实数据的不规范和数据量大会暴露提示词和序列化方面的问题
 
-**验证**：任务集成功率不低于 mock 基线；每个失败任务能定位到后端数据、序列化、还是模型判断。
+#### 验证
+
+任务集成功率不低于 mock 基线；每个失败任务能定位到后端数据、序列化、还是模型判断。
 
 ### 34 · 认证与授权
 
 **起点**：`session_dependency` 直接信任 `X-Session-Id` 请求头，路由不验证调用者身份。
 
-**做什么**：
+#### 做什么
 
 - [ ] 在创建会话之前认证调用者，把验证过的用户身份传给会话；会话 ID 只是一个引用标识，不是凭证
 - [ ] 每条路由和 MCP 服务器都做授权：会话里的 `user_id` 决定能看哪些订单、哪些记忆
 - [ ] 后端调用你的服务用的凭证由宿主从会话解析，永远不进入模型上下文
 - [ ] 限流放在 chat 路由前面
 
-**验证**：用 A 的会话请求 B 的订单、记忆、购物车——**全部被拒绝**；没有会话的请求被拒绝；`DEBUG` 日志里没有凭证。
+#### 验证
+
+用 A 的会话请求 B 的订单、记忆、购物车——**全部被拒绝**；没有会话的请求被拒绝；`DEBUG` 日志里没有凭证。
 
 ### 35 · 持久化与原子业务约束
 
 **起点**：`SessionStore` 把数据存在进程内存里，购物车上限靠 `asyncio.Lock` 保证，记忆存在单机文件里。
 
-**做什么**：
+#### 做什么
 
 - [ ] 继承 `SessionStore`，把 state 的 CAS 写入和 transcript 的追加操作迁移到你的数据库上（用条件更新或版本列来实现 CAS）
 - [ ] 数量上限、库存扣减、商户变更的应用由后端的原子操作保证，不再依赖进程内的锁
 - [ ] `MemoryStore` 换成数据库实现；保留文件权限 0o600 所代表的访问控制思路：记忆表只有宿主服务能读取
 
-**验证**：启动两个 API 进程，同一会话并发加购 30 次同一商品——购物车数量停在 24（上限）；两个进程同时 apply 同一变更——只应用一次；重启进程后会话和记忆数据都还在。
+#### 验证
+
+启动两个 API 进程，同一会话并发加购 30 次同一商品——购物车数量停在 24（上限）；两个进程同时 apply 同一变更——只应用一次；重启进程后会话和记忆数据都还在。
 
 ### 36 · 幂等与重试
 
 **起点**：用户点两次「加购」、SSE 断线后前端重发、模型重试一次工具调用——每种都可能重复执行写操作。
 
-**做什么**：
+#### 做什么
 
 - [ ] 每个写工具调用带幂等键（`docs/backends.md` Step 01：从会话 ID + `tool_use_id` 派生），后端去重
 - [ ] 前端重发时带上原请求的 ID；`append_user_turn` 排队的应用事件也带 ID
 - [ ] 模型 API 错误的重试策略：只重试幂等的读；写失败以 `error` 事件结束 turn，让模型和用户看到
 
-**验证**：同一 `tool_use_id` 提交两次——只执行一次；网络断开后重发 chat——购物车不重复；故意让模型 API 返回 529——turn 以可读的错误结束，会话状态没有半截写入。
+#### 验证
+
+同一 `tool_use_id` 提交两次——只执行一次；网络断开后重发 chat——购物车不重复；故意让模型 API 返回 529——turn 以可读的错误结束，会话状态没有半截写入。
 
 ### 37 · 故障恢复
 
 **起点**：16.2 处理了单个对话轮次内的中断。现在要处理进程级别的故障：API 进程在流传输中途被杀、数据库超时、模型 API 长时间不可用。
 
-**做什么**：
+#### 做什么
 
 - [ ] 对话轮次开始时写入「进行中」标记，进程重启时用 `close_open_tool_uses()` 修复未完成轮次的历史记录
 - [ ] 后端调用加上超时和熔断机制，超时后以 `unavailable` 工具结果返回，模型可以据此给用户合理回复
 - [ ] 记忆提取的后台任务失败时只记录日志、不影响会话（Step 16 已经是这样），但要支持重新执行
 
-**验证**：在流传输中途 `kill -9` API 进程 → 重启 → 同一会话能继续对话，历史记录格式合法；数据库不可用时 → 用户看到明确的错误提示而不是页面卡住。
+#### 验证
+
+在流传输中途 `kill -9` API 进程 → 重启 → 同一会话能继续对话，历史记录格式合法；数据库不可用时 → 用户看到明确的错误提示而不是页面卡住。
 
 ### 38 · 运行监测
 
 **起点**：`log_model_call` 每次模型调用只打一行 INFO 日志。生产环境需要能回答「现在有多少对话轮次在失败、为什么」。
 
-**做什么**：
+#### 做什么
 
 - [ ] 每个对话轮次记录一条结构化日志：会话 ID 摘要、轮数、工具调用序列、`usage`、耗时、结束原因（`turn_complete` / `error` / 迭代上限）
 - [ ] 指标监控：对话轮次成功率、P50/P95 延迟、每轮成本、门控拦截次数、缓存命中率（`cache_read` / 总输入 token）
 - [ ] 把 EVALS.md 任务集做成定时回归任务：每天用真模型跑一遍，把成功率和成本画成趋势图
 - [ ] 日志中不能出现会话 ID、凭证、记忆事实原文（参考 `docs/safety.md` 的日志脱敏要求）
 
-**验证**：故意注入一个失败场景（让后端抛异常）→ 能在监控仪表盘上看到它、定位到那个对话轮次、看到完整的工具调用序列。
+#### 验证
+
+故意注入一个失败场景（让后端抛异常）→ 能在监控仪表盘上看到它、定位到那个对话轮次、看到完整的工具调用序列。
 
 ### 39 · 灰度与回滚
 
 **起点**：改一行提示词就意味着改变模型行为。没有 eval 和灰度发布，你不知道改动是否引入了问题。
 
-**做什么**：
+#### 做什么
 
 - [ ] 提示词、工具描述、技能、护栏配置全部版本化；`scripts/check.py` 在 CI 里保证 `system.md` 同步
 - [ ] 发布前跑 EVALS.md 任务集，成功率和成本对比上一版本；下降超过阈值就不发
 - [ ] 灰度发布：新版本先接入一小部分会话（按 `user_id` 哈希分流），对比两组的对话轮次成功率和拦截率
 - [ ] 回滚：配置和提示词能在不重新部署代码的情况下切回上一版本
 
-**验证**：把 `max_price_delta_pct` 改成 5 发一个灰度 → 看到灰度组的拦截率上升 → 回滚 → 拦截率恢复。整个过程有记录。
+#### 验证
+
+把 `max_price_delta_pct` 改成 5 发一个灰度 → 看到灰度组的拦截率上升 → 回滚 → 拦截率恢复。整个过程有记录。
 
 ---
 
@@ -1436,7 +1492,6 @@ claude plugin install commerce-builder@claude-commerce-agents
 > - 能定位失败并回滚发布（Step 38、40）
 
 ---
-
 
 
 ## 总结
