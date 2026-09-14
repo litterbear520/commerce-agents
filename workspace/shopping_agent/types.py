@@ -126,7 +126,7 @@ class ShoppingSessionContext(BaseModel):
 
 class ShoppingSessionState(BaseModel):
     """服务端为会话持有的状态。``seen_products`` 是溯源记录：
-    购物车写操作只接受其中的 id，展示型工具调用从中富化。"""
+    购物车写操作只接受其中的 id，展示型工具调用从中补全商品信息。"""
 
     seen_products: dict[str, Product] = Field(default_factory=dict)
 
