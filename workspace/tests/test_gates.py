@@ -9,12 +9,14 @@ from s03_provenance_gate import (
     seen_products,
     update_cart_item,
 )
-from s05_options_gate import MAX_CART_LINES, MAX_QUANTITY_PER_ITEM, VARIANTS, check_options
-from s05_options_gate import add_to_cart as s05_add_to_cart
-from s05_options_gate import cart as s05_cart
-from s05_options_gate import remember_products as s05_remember
-from s05_options_gate import seen_products as s05_seen
-from s05_options_gate import update_cart_item as s05_update
+from s05_async import MAX_CART_LINES, MAX_QUANTITY_PER_ITEM
+from s05_async import add_to_cart as s05_add_to_cart
+from s05_async import cart as s05_cart
+from s05_async import remember_products as s05_remember
+from s05_async import seen_products as s05_seen
+from s05_async import update_cart_item as s05_update
+from s05_options_gate import VARIANTS, check_options
+from s05_options_gate import seen_products as s05_sync_seen
 
 # ── check_provenance ───────────────────────────────────────────────
 
@@ -106,7 +108,7 @@ def test_update_cart_item_requires_provenance():
 
 def test_family_id_is_held():
     """family 商品（有 options）被选项门控拦截。"""
-    s05_seen["AR-2000"] = {
+    s05_sync_seen["AR-2000"] = {
         "id": "AR-2000",
         "title": "ACME 基础款圆领T恤",
         "price": 79.0,
@@ -121,14 +123,19 @@ def test_family_id_is_held():
 
 def test_variant_id_passes_options_check():
     """变体商品（没有 options）通过选项门控。"""
-    s05_seen["AR-2001"] = VARIANTS["AR-2001"]
+    s05_sync_seen["AR-2001"] = VARIANTS["AR-2001"]
     result = check_options("AR-2001")
     assert result is None
 
 
 def test_plain_product_passes_options_check():
     """普通商品（没有 options）通过选项门控。"""
-    s05_seen["AR-1104"] = {"id": "AR-1104", "title": "键盘", "price": 99.0, "in_stock": True}
+    s05_sync_seen["AR-1104"] = {
+        "id": "AR-1104",
+        "title": "键盘",
+        "price": 99.0,
+        "in_stock": True,
+    }
     result = check_options("AR-1104")
     assert result is None
 
