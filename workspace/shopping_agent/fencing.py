@@ -59,6 +59,14 @@ class Fence:
             re.IGNORECASE,
         )
 
+    @property
+    def open(self) -> str:
+        return f"<{self.label}>"
+
+    @property
+    def close(self) -> str:
+        return f"</{self.label}>"
+
     def sanitize_text(self, text: str) -> str:
         # 清洗不可信文本
         text = unicodedata.normalize("NFKC", text)

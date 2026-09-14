@@ -15,7 +15,6 @@ from s05_async import cart as s05a_cart
 from s05_async import seen_products as s05a_seen
 from s05_options_gate import cart as s05_cart
 from s05_options_gate import seen_products as s05_seen  # also used by check_options tests
-
 from shopping_agent import (
     Cart,
     CartItem,
@@ -26,13 +25,12 @@ from shopping_agent import (
     StorefrontBackend,
 )
 
-
 # ── Stage A 状态清理 ──────────────────────────────────────────────────
 
 
 @pytest.fixture(autouse=True)
 def clean_state():
-    """每个测试函数执行前自动清空状态。"""
+    # 每个测试函数执行前自动清空 Stage A 脚本的状态
     s03_seen.clear()
     s03_cart.clear()
     s04_seen.clear()
@@ -137,7 +135,7 @@ VARIANTS: dict[str, Product] = {
 
 
 class FakeBackend(StorefrontBackend):
-    """内存版 StorefrontBackend，用 CATALOG 数据实现全部方法。"""
+    # 内存版 StorefrontBackend，用 CATALOG 数据实现全部方法
 
     def __init__(self) -> None:
         self.cart_items: dict[str, CartItem] = {}

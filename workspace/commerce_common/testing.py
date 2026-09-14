@@ -85,9 +85,10 @@ Chunks = dict[int, list[str | BaseException]]
 
 
 class FakeStream:
-    """把一个完整响应拆成流式事件序列。
-    每个块先发 content_block_start，再发 delta（文本或工具参数 JSON），
-    最后发 content_block_stop。"""
+    """把一个完整响应拆成流式事件序列。"""
+
+    # 每个块先发 content_block_start，再发 delta（文本或工具参数 JSON），
+    # 最后发 content_block_stop。
 
     def __init__(self, final: SimpleNamespace, chunks: Chunks | None = None) -> None:
         self._final = final
