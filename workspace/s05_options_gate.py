@@ -1,6 +1,8 @@
+import asyncio
 import json
 import re
 import unicodedata
+import weakref
 from typing import Any
 
 # ── 清洗 & 围栏 ───────────────────────────────────────────────────
@@ -246,6 +248,17 @@ OPTIONS_GATE = "options"
 MAX_QUANTITY_PER_ITEM = 24
 MAX_CART_LINES = 100
 
+# 购物车写锁：门控先读购物车再写，同一会话的并发写入不能交叉
+# 项目中对应 gates.py 的 _cart_locks，用 WeakValueDictionary 自动回收
+_cart_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+
+
+def _cart_lock(session_id: str) -> asyncio.Lock:
+    lock = _cart_locks.get(session_id)
+    if lock is None:
+        lock = _cart_locks[session_id] = asyncio.Lock()
+    return lock
+
 
 def check_provenance(product_id: str) -> ToolOutcome | None:
     """product_id 在本次会话中没有来源记录时返回 held，否则返回 None。"""
@@ -412,31 +425,29 @@ tools = [
 # ── 工具函数 ────────────────────────────────────────────────────────
 
 
-def search_products(query: str, limit: int = 5) -> ToolOutcome:
+async def search_products(query: str, limit: int = 5) -> ToolOutcome:
     """在假商品列表里做简单的关键词匹配。结果用围栏包裹。"""
     query_lower = query.lower()
     results = [p for p in PRODUCTS if query_lower in p["title"].lower()]
     results = results[:limit]
     remember_products(results)
-    # ← NEW: 用围栏包裹第三方内容，防止商品标题里的注入指令影响模型
     return ToolOutcome(STOREFRONT_FENCE.fence_payload(results))
 
 
-def get_product_details(product_id: str) -> ToolOutcome:
+async def get_product_details(product_id: str) -> ToolOutcome:
     """按 product_id 查找商品，返回完整信息。结果用围栏包裹。
     family 商品会附带变体列表；变体商品也能直接查到。"""
     # 先在主商品列表里找
     for p in PRODUCTS:
         if p["id"] == product_id:
             remember_products([p])
-            # ← NEW: 如果是 family 商品，附带变体列表供模型和顾客选择
             if p.get("options"):
                 variants = [v for v in VARIANTS.values() if v.get("variant_of") == product_id]
                 remember_products(variants)
                 detail = {**p, "variants": variants}
                 return ToolOutcome(STOREFRONT_FENCE.fence_payload(detail))
             return ToolOutcome(STOREFRONT_FENCE.fence_payload(p))
-    # ← NEW: 再在变体里找（变体不在搜索结果里，但可以通过 ID 直接查）
+    # 变体不在搜索结果里，但可以通过 ID 直接查
     if product_id in VARIANTS:
         v = VARIANTS[product_id]
         remember_products([v])
@@ -444,76 +455,79 @@ def get_product_details(product_id: str) -> ToolOutcome:
     return ToolOutcome.error(f"没有找到商品 {product_id}")
 
 
-def get_cart() -> ToolOutcome:
+async def get_cart() -> ToolOutcome:
     """返回当前购物车内容和小计。"""
     subtotal = sum(item["price"] * item["quantity"] for item in cart)
     return ToolOutcome.ok({"items": cart, "subtotal": subtotal})
 
 
-def add_to_cart(product_id: str, quantity: int = 1) -> ToolOutcome:
+async def add_to_cart(
+    product_id: str, quantity: int = 1, *, session_id: str = "default"
+) -> ToolOutcome:
     # 门控：来源检查 + 选项检查 + 库存 + 数量上限
     if held := check_provenance(product_id) or check_options(product_id):
         return held
     product = seen_products[product_id]
-    # 库存检查
     if not product["in_stock"]:
         return ToolOutcome.error(f"商品 {product['title']} 目前缺货")
     requested = max(1, quantity)
-    # 购物车行数上限
-    existing = next((item for item in cart if item["product_id"] == product_id), None)
-    if existing is None and len(cart) >= MAX_CART_LINES:
-        return ToolOutcome.error("The cart is full.")
-    # 单品数量上限
-    current_qty = existing["quantity"] if existing else 0
-    allowed = min(requested, max(0, MAX_QUANTITY_PER_ITEM - current_qty))
-    if allowed <= 0:
-        return ToolOutcome.error(
-            f"This item is already at the per-item limit of {MAX_QUANTITY_PER_ITEM}."
-        )
-    # 如果购物车里已有，增加数量
-    if existing is not None:
-        existing["quantity"] += allowed
-        return ToolOutcome.ok(
+    # 写锁：防止并发请求交叉读写购物车，绕过数量上限
+    async with _cart_lock(session_id):
+        existing = next((item for item in cart if item["product_id"] == product_id), None)
+        if existing is None and len(cart) >= MAX_CART_LINES:
+            return ToolOutcome.error("The cart is full.")
+        current_qty = existing["quantity"] if existing else 0
+        allowed = min(requested, max(0, MAX_QUANTITY_PER_ITEM - current_qty))
+        if allowed <= 0:
+            return ToolOutcome.error(
+                f"This item is already at the per-item limit of {MAX_QUANTITY_PER_ITEM}."
+            )
+        if existing is not None:
+            existing["quantity"] += allowed
+            return ToolOutcome.ok(
+                {
+                    "ok": True,
+                    "product_id": product_id,
+                    "title": product["title"],
+                    "quantity": existing["quantity"],
+                }
+            )
+        cart.append(
             {
-                "ok": True,
                 "product_id": product_id,
                 "title": product["title"],
-                "quantity": existing["quantity"],
+                "price": product["price"],
+                "quantity": allowed,
             }
         )
-    # 新增一行
-    cart.append(
-        {
-            "product_id": product_id,
-            "title": product["title"],
-            "price": product["price"],
-            "quantity": allowed,
-        }
-    )
     return ToolOutcome.ok(
         {"ok": True, "product_id": product_id, "title": product["title"], "quantity": allowed}
     )
 
 
-def update_cart_item(product_id: str, quantity: int) -> ToolOutcome:
+async def update_cart_item(
+    product_id: str, quantity: int, *, session_id: str = "default"
+) -> ToolOutcome:
     # 门控：来源 + 选项 + 数量上限
     if held := check_provenance(product_id) or check_options(product_id):
         return held
     requested = max(1, quantity)
     applied = min(requested, MAX_QUANTITY_PER_ITEM)
-    for item in cart:
-        if item["product_id"] == product_id:
-            item["quantity"] = applied
-            return ToolOutcome.ok({"ok": True, "product_id": product_id, "quantity": applied})
+    async with _cart_lock(session_id):
+        for item in cart:
+            if item["product_id"] == product_id:
+                item["quantity"] = applied
+                return ToolOutcome.ok({"ok": True, "product_id": product_id, "quantity": applied})
     return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 
-def remove_from_cart(product_id: str) -> ToolOutcome:
+async def remove_from_cart(product_id: str, *, session_id: str = "default") -> ToolOutcome:
     """从购物车中移除商品。"""
-    for i, item in enumerate(cart):
-        if item["product_id"] == product_id:
-            removed = cart.pop(i)
-            return ToolOutcome.ok({"ok": True, "removed": removed["title"]})
+    async with _cart_lock(session_id):
+        for i, item in enumerate(cart):
+            if item["product_id"] == product_id:
+                removed = cart.pop(i)
+                return ToolOutcome.ok({"ok": True, "removed": removed["title"]})
     return ToolOutcome.error(f"购物车中没有商品 {product_id}")
 
 
@@ -528,7 +542,7 @@ TOOL_MAP = {
 }
 
 
-# ── 对话循环 ────────────────────────────────────────────────────────
+# ── 对话循环（async）──────────────────────────────────────────────
 if __name__ == "__main__":
     from dotenv import load_dotenv
 
@@ -537,51 +551,53 @@ if __name__ == "__main__":
 
     client = Anthropic(base_url="https://api.deepseek.com/anthropic")
     model = "deepseek-v4-flash"
-    # ← NEW: 系统提示词加入围栏信任规则
     system = f"你是一个 ACME 购物助手。\n\n## 信任规则\n{STOREFRONT_FENCE.notice}"
     messages: list = []
 
-    while True:
-        user_input = input(">>")
-        if not user_input:
-            break
-        messages.append({"role": "user", "content": user_input})
-
+    async def main() -> None:
         while True:
-            response = client.messages.create(
-                model=model,
-                system=system,
-                max_tokens=1000,
-                tools=tools,  # type: ignore[list-item]
-                messages=messages,
-            )
-            messages.append({"role": "assistant", "content": response.content})
-
-            for block in response.content:
-                if block.type == "text":
-                    print(f"AI: {block.text}")
-
-            if response.stop_reason != "tool_use":
+            user_input = input(">>")
+            if not user_input:
                 break
+            messages.append({"role": "user", "content": user_input})
 
-            tool_results = []
-            for block in response.content:
-                if block.type == "tool_use":
-                    print(f"[调用工具] {block.name}({block.input})")
-                    run = TOOL_MAP[block.name]
-                    outcome = run(**block.input)  # type: ignore[arg-type]
-                    if outcome.blocked:
-                        print(f"[已拦截] gate={outcome.blocked}: {outcome.text}")
-                    elif outcome.is_error:
-                        print(f"[错误] {outcome.text}")
-                    else:
-                        print(f"[工具结果] {outcome.text}")
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": outcome.text,
-                            "is_error": outcome.is_error,
-                        }
-                    )
-            messages.append({"role": "user", "content": tool_results})
+            while True:
+                response = client.messages.create(
+                    model=model,
+                    system=system,
+                    max_tokens=1000,
+                    tools=tools,  # type: ignore[list-item]
+                    messages=messages,
+                )
+                messages.append({"role": "assistant", "content": response.content})
+
+                for block in response.content:
+                    if block.type == "text":
+                        print(f"AI: {block.text}")
+
+                if response.stop_reason != "tool_use":
+                    break
+
+                tool_results = []
+                for block in response.content:
+                    if block.type == "tool_use":
+                        print(f"[调用工具] {block.name}({block.input})")
+                        run = TOOL_MAP[block.name]
+                        outcome = await run(**block.input)  # type: ignore[arg-type]
+                        if outcome.blocked:
+                            print(f"[已拦截] gate={outcome.blocked}: {outcome.text}")
+                        elif outcome.is_error:
+                            print(f"[错误] {outcome.text}")
+                        else:
+                            print(f"[工具结果] {outcome.text}")
+                        tool_results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": outcome.text,
+                                "is_error": outcome.is_error,
+                            }
+                        )
+                messages.append({"role": "user", "content": tool_results})
+
+    asyncio.run(main())

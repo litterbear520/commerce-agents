@@ -133,7 +133,7 @@ def test_plain_product_passes_options_check():
     assert result is None
 
 
-def test_add_to_cart_blocks_family():
+async def test_add_to_cart_blocks_family():
     """s05 的 add_to_cart 对 family 商品返回 held。"""
     s05_remember(
         [
@@ -146,22 +146,22 @@ def test_add_to_cart_blocks_family():
             }
         ]
     )
-    result = s05_add_to_cart("AR-2000")
+    result = await s05_add_to_cart("AR-2000")
     assert result.blocked == "options"
     assert len(s05_cart) == 0
 
 
-def test_add_to_cart_allows_variant():
+async def test_add_to_cart_allows_variant():
     """s05 的 add_to_cart 对变体商品正常执行。"""
     s05_remember([VARIANTS["AR-2002"]])
-    result = s05_add_to_cart("AR-2002")
+    result = await s05_add_to_cart("AR-2002")
     assert result.blocked is None
     assert result.is_error is False
     assert len(s05_cart) == 1
     assert s05_cart[0]["product_id"] == "AR-2002"
 
 
-def test_update_cart_blocks_family():
+async def test_update_cart_blocks_family():
     """s05 的 update_cart_item 对 family 商品也拦截。"""
     s05_seen["AR-2000"] = {
         "id": "AR-2000",
@@ -170,7 +170,7 @@ def test_update_cart_blocks_family():
         "in_stock": True,
         "options": {"尺码": ["S", "M", "L"]},
     }
-    result = s05_update("AR-2000", 2)
+    result = await s05_update("AR-2000", 2)
     assert result.blocked == "options"
 
 
@@ -184,38 +184,37 @@ PLAIN_PRODUCT = {
 }
 
 
-def test_add_to_cart_caps_quantity():
+async def test_add_to_cart_caps_quantity():
     """加购数量超过单品上限时，被截断到上限。"""
     s05_remember([PLAIN_PRODUCT])
-    result = s05_add_to_cart("AR-1104", quantity=30)
+    result = await s05_add_to_cart("AR-1104", quantity=30)
     assert result.blocked is None
     assert s05_cart[0]["quantity"] == MAX_QUANTITY_PER_ITEM  # 24，不是 30
 
 
-def test_add_to_cart_rejects_at_limit():
+async def test_add_to_cart_rejects_at_limit():
     """已有 24 件再加 → 直接拒绝。"""
     s05_remember([PLAIN_PRODUCT])
     s05_cart.append({"product_id": "AR-1104", "title": "键盘", "price": 99.0, "quantity": 24})
-    result = s05_add_to_cart("AR-1104", quantity=1)
+    result = await s05_add_to_cart("AR-1104", quantity=1)
     assert result.is_error is True
     assert "per-item limit" in result.text
 
 
-def test_add_to_cart_rejects_cart_full():
+async def test_add_to_cart_rejects_cart_full():
     """购物车已满 100 行，新商品被拒绝。"""
     s05_remember([PLAIN_PRODUCT])
-    # 塞满 100 行不同的商品
     for i in range(MAX_CART_LINES):
         s05_cart.append({"product_id": f"FAKE-{i}", "title": "x", "price": 1.0, "quantity": 1})
-    result = s05_add_to_cart("AR-1104")
+    result = await s05_add_to_cart("AR-1104")
     assert result.is_error is True
     assert "full" in result.text
 
 
-def test_update_cart_caps_quantity():
+async def test_update_cart_caps_quantity():
     """update 数量超过单品上限时，被截断到上限。"""
     s05_remember([PLAIN_PRODUCT])
     s05_cart.append({"product_id": "AR-1104", "title": "键盘", "price": 99.0, "quantity": 5})
-    result = s05_update("AR-1104", quantity=50)
+    result = await s05_update("AR-1104", quantity=50)
     assert result.is_error is False
     assert s05_cart[0]["quantity"] == MAX_QUANTITY_PER_ITEM  # 24，不是 50
