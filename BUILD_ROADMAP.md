@@ -391,7 +391,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 - [x] 写 `shopping_agent/tests/`：
   - `test_executor.py`（15 个）：搜索、添加、详情、购物车、围栏、清洗、来源校验、选项、售罄（订单/政策工具的测试在 Step 13 补）
   - `test_serialization.py`（5 个）：精简格式的商品、变体、带选项值的购物车行、行小计
-- [ ] 创建 `.github/workflows/ci.yml` 的第一个 job `python`：`ruff check` + `ruff format --check` + `pytest`。Step 29 再加矩阵、供应链检查和 web build
+- [x] 创建 `.github/workflows/ci.yml` 的第一个 job `python`：`ruff check` + `ruff format --check` + `pytest`（当前在 workspace 子目录，搬到独立仓库后生效）。Step 29 再加供应链检查和 web build
 
 #### 验证
 
