@@ -431,16 +431,16 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 做什么
 
-- [ ] 实现 `prompt.py` 的两段式结构：
+- [x] 实现 `prompt.py` 的两段式结构：
   - `build_static_system(config, skills)`：身份、规则、技能索引、工具使用规则、展示规则、信任规则、边界——这些只取决于配置和技能定义，不随请求变化
   - `build_dynamic_context(preferences, memory_facts, cart, page, now)`：用户档案、记忆、购物车摘要、当前页面、当地时间——用 `<storefront_data>` 围栏包起来
-- [ ] 实现 `commerce-common/commerce_common/prompt_assembly.py`：
+- [x] 实现 `commerce-common/commerce_common/prompt_assembly.py`：
   - `build_system_blocks()`：静态文本带 `cache_control: ephemeral`，动态上下文单独一块
   - `with_tool_cache_control(tools)`：给最后一个工具加 `cache_control`（作为第二个缓存断点）
   - `build_request_messages()`：在最新一条已持久化的消息上放第三个滚动缓存断点
-- [ ] 实现 `context_clock(now)`：只渲染到小时，不渲染分钟——如果渲染分钟，每分钟字节就不一样，缓存就会失效
+- [x] 实现 `context_clock(now)`：只渲染到小时，不渲染分钟——如果渲染分钟，每分钟字节就不一样，缓存就会失效
 
-- [ ] 写 `test_prompt_assembly.py`：系统块结构、时钟渲染、工具缓存控制、滚动断点、消息合并
+- [x] 写 `test_prompt_assembly.py`：系统块结构、时钟渲染、工具缓存控制、滚动断点、消息合并
 
 #### 验证
 
