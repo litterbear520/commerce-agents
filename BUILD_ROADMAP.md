@@ -444,7 +444,9 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 验证
 
-`pytest test_prompt_assembly.py`（单元测试）。观察 API 返回的 `usage` 字段：
+**当步可做**：`pytest test_prompt_assembly.py`（单元测试）— 系统块结构、时钟渲染、工具缓存控制、滚动断点、消息合并。
+
+**Step 15 编排器就绪后回来做**：观察 API 返回的 `usage` 字段：
 从第二个对话轮次起，`cache_read_input_tokens` 应该覆盖静态系统提示词 + 工具列表的部分；
 `cache_creation_input_tokens` 每个轮次都会有一些——滚动断点把新消息写进缓存——
 但应该远小于读取量。缓存 5 分钟过期，隔久了再聊会重新出现大额 creation。
