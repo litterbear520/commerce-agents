@@ -184,7 +184,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-- **单元测试**：`pytest test_gates.py` 通过
+- **单元测试**：`pytest tests/test_gates.py` 通过
 - **模型行为 eval**：「把 XYZ-999 加入购物车」→ `add_to_cart("XYZ-999")` 被拦截 → 模型自动改为先搜索
 
 
@@ -232,7 +232,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-- **单元测试**：`pytest test_fencing.py` 通过——伪造的围栏标记、特殊 token、零宽字符、`\n\nHuman:` 被清除或改写
+- **单元测试**：`pytest tests/test_fencing.py` 通过——伪造的围栏标记、特殊 token、零宽字符、`\n\nHuman:` 被清除或改写
 - **模型行为 eval**：启用 `EVALS.md` 第 10 行（fence-001-injection）跑真模型，期望模型引用商品事实但不给折扣
 
 
@@ -290,7 +290,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-`pytest test_gates.py`（单元测试）。对话中尝试把一个 family 商品加入购物车 → 被拦截并提示选择变体；
+`pytest tests/test_gates.py`（单元测试）。对话中尝试把一个 family 商品加入购物车 → 被拦截并提示选择变体；
 加满 24 件同一商品后再加 → 被数量上限拦截。
 
 > **当前限制**：`asyncio.Lock` 只在单进程内有效。多进程或多实例部署时，上限要由后端的原子操作
@@ -427,7 +427,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-`pytest shopping-agent/core/tests/ -v` — 全绿，零 API 调用（单元测试 + 假模型集成测试）。
+`pytest shopping_agent/tests/ -v` — 全绿，零 API 调用（单元测试 + 假模型集成测试）。
 推一次提交，看 CI 绿。
 
 #### 设计决策
@@ -483,7 +483,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 验证
 
-**当步可做**：`pytest test_prompt_assembly.py`（单元测试）— 系统块结构、时钟渲染、工具缓存控制、滚动断点、消息合并。
+**当步可做**：`pytest commerce_common/tests/test_prompt_assembly.py`（单元测试）— 系统块结构、时钟渲染、工具缓存控制、滚动断点、消息合并。
 
 **Step 15 编排器就绪后回来做**：观察 API 返回的 `usage` 字段：
 从第二个对话轮次起，`cache_read_input_tokens` 应该覆盖静态系统提示词 + 工具列表的部分；
@@ -552,7 +552,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 验证
 
-`pytest test_presentation.py`。
+`pytest commerce_common/tests/test_presentation.py shopping_agent/tests/test_presentation.py`。
 
 验证流程：模型调用 `present_products({picks: [{product_id: "p-1", reason: "..."}]})`
 → 服务端从 `seen_products` 补全完整商品数据 → 返回 `ui` 事件。
@@ -594,7 +594,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 验证
 
-`pytest test_skills.py`（单元测试）。模型遇到「帮我规划露营要买什么」→ 调用 `load_skill("planning-goals")` →
+`pytest commerce_common/tests/test_skills.py`（单元测试）。模型遇到「帮我规划露营要买什么」→ 调用 `load_skill("planning-goals")` →
 获得分步规则 → 按规则组织输出（模型行为 eval：把这类任务加进任务集，对比加载技能前后的成功率）。
 
 #### 设计决策
@@ -626,7 +626,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 验证
 
-`pytest shopping-agent/core/tests/test_executor.py -v` — 新增的售后工具测试全绿。
+`pytest shopping_agent/tests/test_executor.py -v` — 新增的售后工具测试全绿。
 
 #### 设计决策
 
@@ -658,7 +658,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 验证
 
-`pytest test_grounding.py`（单元测试）。默认词表是英文的，验证时用英文输入：
+`pytest shopping_agent/tests/test_grounding.py`（单元测试）。默认词表是英文的，验证时用英文输入：
 "Can I return these headphones?" → 强制调用 `search_policies` → 拿到退货政策 → 基于政策回答。
 "Is SKU-1234 in stock?" → 强制调用 `get_product_details("SKU-1234")`——目录规则匹配的是 ID 的正则表达式
 （`product_id_patterns`），所以即使是中文句子，只要里面带 ID 也能触发。
