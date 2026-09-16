@@ -184,7 +184,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-- **单元测试**：`pytest tests/test_gates.py` 通过
+- **单元测试**：`pytest cookbooks/tests/test_gates.py` 通过
 - **模型行为 eval**：「把 XYZ-999 加入购物车」→ `add_to_cart("XYZ-999")` 被拦截 → 模型自动改为先搜索
 
 
@@ -232,7 +232,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-- **单元测试**：`pytest tests/test_fencing.py` 通过——伪造的围栏标记、特殊 token、零宽字符、`\n\nHuman:` 被清除或改写
+- **单元测试**：`pytest cookbooks/tests/test_fencing.py` 通过——伪造的围栏标记、特殊 token、零宽字符、`\n\nHuman:` 被清除或改写
 - **模型行为 eval**：启用 `EVALS.md` 第 10 行（fence-001-injection）跑真模型，期望模型引用商品事实但不给折扣
 
 
@@ -290,7 +290,7 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 验证
 
-`pytest tests/test_gates.py`（单元测试）。对话中尝试把一个 family 商品加入购物车 → 被拦截并提示选择变体；
+`pytest cookbooks/tests/test_gates.py`（单元测试）。对话中尝试把一个 family 商品加入购物车 → 被拦截并提示选择变体；
 加满 24 件同一商品后再加 → 被数量上限拦截。
 
 > **当前限制**：`asyncio.Lock` 只在单进程内有效。多进程或多实例部署时，上限要由后端的原子操作
