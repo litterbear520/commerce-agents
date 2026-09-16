@@ -512,43 +512,43 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 **1. 前置依赖**
 
-- [ ] 实现 `commerce_common/streaming.py`（`presentation.py` 的返回类型）：
+- [x] 实现 `commerce_common/streaming.py`（`presentation.py` 的返回类型）：
   - `AgentEvent`：事件基类，`type` + `data`，带 `ui()` / `text_delta()` 等类方法
   - `ToolOutcome`：工具调用结果，`result_text` + `events` + `is_error` + `blocked`
-- [ ] 在 `commerce_common/fencing.py` 补 `sanitize_label()` + `sanitize_suggestion_chips()`
+- [x] 在 `commerce_common/fencing.py` 补 `sanitize_label()` + `sanitize_suggestion_chips()`
   （`PresentSuggestionsPayload` 的 validator 需要它们）
 
 **2. 展示框架** — `commerce_common/presentation.py`
 
-- [ ] `PresentationComponent`：name + component + payload_model + enrich 钩子
-- [ ] `run_presentation()`：验证 payload → 调用 enrich 补全服务端数据 → 发出 `ui` 事件
-- [ ] `PresentationRefused`：enrich 失败时的异常（比如 product_id 解析不出来）
-- [ ] `PresentSuggestionsPayload`：1-4 条建议按钮，验证时自动清洗
+- [x] `PresentationComponent`：name + component + payload_model + enrich 钩子
+- [x] `run_presentation()`：验证 payload → 调用 enrich 补全服务端数据 → 发出 `ui` 事件
+- [x] `PresentationRefused`：enrich 失败时的异常（比如 product_id 解析不出来）
+- [x] `PresentSuggestionsPayload`：1-4 条建议按钮，验证时自动清洗
 
 **3. Payload 定义** — `shopping_agent/tools/presentation.py`
 
-- [ ] `PresentProductsPayload`：picks 列表（product_id + reason）
-- [ ] `PresentComparisonPayload`：entries 列表（product_id + pros/cons）
-- [ ] `PresentPlanPayload`：steps 列表（label + product_ids）
-- [ ] `PresentGuidePayload`：sections 列表 + related_product_ids
-- [ ] `CheckoutPayload`：note + fulfillment_method
+- [x] `PresentProductsPayload`：picks 列表（product_id + reason）
+- [x] `PresentComparisonPayload`：entries 列表（product_id + pros/cons）
+- [x] `PresentPlanPayload`：steps 列表（label + product_ids）
+- [x] `PresentGuidePayload`：sections 列表 + related_product_ids
+- [x] `CheckoutPayload`：note + fulfillment_method
 - `PresentOrderStatusPayload` → Step 13 有了 `Order` 类型再加
 
 **4. 补全钩子** — `shopping_agent/enrichment.py`
 
-- [ ] `enrich_products()`：模型传 product_id 列表 → 从 `seen_products` 补全完整商品记录
-- [ ] `enrich_comparison()`：至少 2 个商品，计算 `price_delta`
-- [ ] `enrich_plan()`：每个步骤的 product_id 解析
-- [ ] `enrich_checkout()`：拉取购物车（必须非空）+ `checkout_handoff()` 获取跳转 URL
+- [x] `enrich_products()`：模型传 product_id 列表 → 从 `seen_products` 补全完整商品记录
+- [x] `enrich_comparison()`：至少 2 个商品，计算 `price_delta`
+- [x] `enrich_plan()`：每个步骤的 product_id 解析
+- [x] `enrich_checkout()`：拉取购物车（必须非空）+ `checkout_handoff()` 获取跳转 URL
 
 **5. 注册与组装**
 
-- [ ] `PRESENTATION_COMPONENTS` 字典：把 name → component 映射组装好
-- [ ] 在 `tools/registry.py` 注册：`present_products`、`present_comparison`、`present_plan`、`present_guide`、`checkout`、`present_suggestions`
+- [x] `PRESENTATION_COMPONENTS` 字典：把 name → component 映射组装好
+- [x] 在 `tools/registry.py` 注册：`present_products`、`present_comparison`、`present_plan`、`present_guide`、`checkout`、`present_suggestions`
 
 **6. 测试**
 
-- [ ] 写 `test_presentation.py`：payload 验证、enrich 钩子、拒绝映射、`price_delta` 计算
+- [x] 写 `test_presentation.py`：payload 验证、enrich 钩子、拒绝映射、`price_delta` 计算
 
 #### 验证
 
@@ -617,7 +617,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 - [ ] 在 `types.py` 添加 `Order`、`OrderItem`、`OrderStatus`、`Policy`、`UserPreferences`、`FulfillmentOption`、`CheckoutHandoff`
 - [ ] 在 `backend.py` 添加 5 个新抽象方法：`get_orders`、`get_order`、`search_policies`、`get_preferences`、`get_fulfillment_options`（ABC 从 6 方法扩展到 11 方法）
 - [ ] 在 `FakeBackend` 里实现这些新方法
-- [ ] 在 `tools/registry.py` 注册这些工具：`get_orders`、`get_order_status`、`search_policies`、`get_preferences`、`get_fulfillment_options`
+- [x] 在 `tools/registry.py` 注册这些工具：`get_orders`、`get_order_status`、`search_policies`、`get_preferences`、`get_fulfillment_options`
 - [ ] 在 `executor.py` 实现对应 handler + `serialization.py` 的 `order_payload()`、`policies_payload()`、`fulfillment_payload()`
 - [ ] 实现 `gates.py` 的 `remember_order_items()`：把订单商品加入已知来源记录，让用户能直接重新购买以前买过的东西
 - [ ] 加 `PresentOrderStatusPayload` 和 `present_order_status` 展示工具（Step 11 留下的）
@@ -909,7 +909,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
   - `check_listing_record_read()`：修改内容之前必须先调用 `get_listing` 读取过该条目
   - `check_campaign_provenance()`：现有活动 ID 必须来自 `get_campaign_performance` 的返回
   - `check_apply_change()`：校验来源 + 重新检查护栏 + 确认宿主审批标记
-- [ ] 在 `tools/registry.py` 注册写工具：`stage_listing_update`、`stage_price_update`、`stage_inventory_action`、`stage_promotion`、`stage_campaign`、`apply_change`、`discard_change`
+- [x] 在 `tools/registry.py` 注册写工具：`stage_listing_update`、`stage_price_update`、`stage_inventory_action`、`stage_promotion`、`stage_campaign`、`apply_change`、`discard_change`
 - [ ] 在 `executor.py` 实现写 handler：所有 staged write 通过 `_staged()` 方法 — 记录变更、可选渲染预览卡、发出 `change_update` 事件
 - [ ] 实现 `enrichment.py` 的 `enrich_change_preview()`：嵌入完整的暂存变更记录
 - [ ] 写 5 个商户技能 `merchant-agent/skills/*/SKILL.md`
