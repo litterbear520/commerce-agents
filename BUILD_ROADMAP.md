@@ -267,11 +267,25 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [x] 在商品模型中区分三种形态：plain（直接购买）、family（有 `options` 字典）、variant（有 `option_values` + `variant_of`）
-- [x] 实现选项门控：`add_to_cart` 如果收到一个 family ID，返回 held，提示「这个商品有选项，请让顾客选择具体的 …」
-- [x] 实现数量上限：`max_quantity_per_item`（默认 24）、`max_cart_lines`（默认 100）
-- [x] 把工具循环改成 `async`（为 Web 服务做准备——后面 FastAPI 需要异步处理多个并发请求）
-- [x] 加购物车写锁（per session 的 `asyncio.Lock`）：防止并发请求绕过上限
+**商品形态**
+
+- [x] 在商品模型中区分三种形态：
+  - plain：直接购买
+  - family：有 `options` 字典
+  - variant：有 `option_values` + `variant_of`
+
+**门控与上限**
+
+- [x] 选项门控：`add_to_cart` 收到 family ID → 返回 held，提示选择变体
+- [x] 数量上限：`max_quantity_per_item`（默认 24）、`max_cart_lines`（默认 100）
+- [x] 购物车写锁（per session 的 `asyncio.Lock`）：防止并发请求绕过上限
+
+**异步改造**
+
+- [x] 把工具循环改成 `async`（后面 FastAPI 需要异步处理并发请求）
+
+**测试**
+
 - [x] 补 `test_gates.py`：family ID 被拦截、上限拦截、并发添加不突破上限、购物车已满
 
 #### 验证
@@ -304,9 +318,14 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 #### 做什么
 
 - [x] 创建 `shopping-agent/core/` 包结构
-- [x] 提取 `types.py`：`Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`、`ShoppingSessionContext`、`ShoppingSessionState`（包含 `seen_products`）— 只包含到目前为止用到的类型，`Order`、`Policy` 等到 Step 13 再加
-- [x] 提取 `backend.py`：`StorefrontBackend` 抽象类 — 目前 6 个抽象方法（search、details、cart CRUD），Step 13 扩展到 11 个
-- [x] 提取 `config.py`：`ShoppingAgentConfig` — 所有可调参数（模型名、max_tokens、迭代上限、购物车上限、系统开关）放在一个 Pydantic 模型里，`extra="forbid"` 让拼写错误在构造时就报错
+- [x] 提取 `types.py`：
+  - `Product`、`ProductDetails`、`SearchFilters`、`CartItem`、`Cart`
+  - `ShoppingSessionContext`、`ShoppingSessionState`（含 `seen_products`）
+  - 只含当前用到的类型；`Order`、`Policy` 等 Step 13 再加
+- [x] 提取 `backend.py`：`StorefrontBackend` 抽象类
+  - 目前 6 个抽象方法（search、details、cart CRUD），Step 13 扩展到 11 个
+- [x] 提取 `config.py`：`ShoppingAgentConfig`
+  - 所有可调参数放在一个 Pydantic 模型里，`extra="forbid"` 让拼写错误在构造时就报错
 - [x] 提取 `fencing.py`：定义 `STOREFRONT_FENCE`
 
 #### 验证
@@ -329,8 +348,10 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 
 #### 做什么
 
-- [x] 提取 `tools/registry.py`：`build_tools()` 函数返回完整的工具列表，每个工具是一个 dict（name、description、input_schema）。工具列表的顺序是固定的
-- [x] 提取 `executor.py`：`ShoppingToolExecutor` — handlers 字典映射工具名到处理方法，`dispatch()` 做分派，`execute()` 包裹分级异常处理（InvalidArguments → domain_error → 兜底 "unavailable"，从具体到通用逐层捕获）
+- [x] 提取 `tools/registry.py`：`build_tools()` 返回完整工具列表，顺序固定
+- [x] 提取 `executor.py`：`ShoppingToolExecutor`
+  - handlers 字典映射工具名到处理方法，`dispatch()` 做分派
+  - `execute()` 包裹分级异常处理（InvalidArguments → domain_error → 兜底 "unavailable"）
 - [x] 提取 `gates.py`：`check_provenance()`、`check_options()`、`gated_add_to_cart()`
 - [x] 提取 `serialization.py`：工具返回值的格式化（`search_result_text()`、`cart_payload()` 等）
 
@@ -356,7 +377,9 @@ Stage B 才拆包，Step 17 才把共享模块迁到 `commerce_common`。
 #### 做什么
 
 - [x] 为 `shopping-agent/core/` 写 `pyproject.toml`：包名 `shopping-agent-core`，版本 `0.1.0.dev0`
-- [x] 写根目录 `requirements.txt`：目前只有一个 `-e ./shopping-agent/core` 可编辑安装 + 依赖精确 pin 版本（后续每加一个包就在这里加一行，最终到 7 个）
+- [x] 写根目录 `requirements.txt`：
+  - 目前只有 `-e ./shopping-agent/core` 可编辑安装 + 依赖精确 pin 版本
+  - 后续每加一个包就加一行，最终到 7 个
 - [x] 写 `requirements-dev.txt`：`-r requirements.txt` + pytest + ruff
 - [x] 写 `scripts/install.sh`：检查 venv → `pip install -r requirements-dev.txt`
 
@@ -471,7 +494,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 做什么
 
-**11.1 前置依赖**
+**1. 前置依赖**
 
 - [ ] 实现 `commerce_common/streaming.py`（`presentation.py` 的返回类型）：
   - `AgentEvent`：事件基类，`type` + `data`，带 `ui()` / `text_delta()` 等类方法
@@ -479,14 +502,14 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 - [ ] 在 `commerce_common/fencing.py` 补 `sanitize_label()` + `sanitize_suggestion_chips()`
   （`PresentSuggestionsPayload` 的 validator 需要它们）
 
-**11.2 展示框架** — `commerce_common/presentation.py`
+**2. 展示框架** — `commerce_common/presentation.py`
 
 - [ ] `PresentationComponent`：name + component + payload_model + enrich 钩子
 - [ ] `run_presentation()`：验证 payload → 调用 enrich 补全服务端数据 → 发出 `ui` 事件
 - [ ] `PresentationRefused`：enrich 失败时的异常（比如 product_id 解析不出来）
 - [ ] `PresentSuggestionsPayload`：1-4 条建议芯片，验证时自动清洗
 
-**11.3 Payload 定义** — `shopping_agent/tools/presentation.py`
+**3. Payload 定义** — `shopping_agent/tools/presentation.py`
 
 - [ ] `PresentProductsPayload`：picks 列表（product_id + reason）
 - [ ] `PresentComparisonPayload`：entries 列表（product_id + pros/cons）
@@ -495,19 +518,19 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 - [ ] `CheckoutPayload`：note + fulfillment_method
 - `PresentOrderStatusPayload` → Step 13 有了 `Order` 类型再加
 
-**11.4 充实钩子** — `shopping_agent/enrichment.py`
+**4. 充实钩子** — `shopping_agent/enrichment.py`
 
 - [ ] `enrich_products()`：模型传 product_id 列表 → 从 `seen_products` 补全完整商品记录
 - [ ] `enrich_comparison()`：至少 2 个商品，计算 `price_delta`
 - [ ] `enrich_plan()`：每个步骤的 product_id 解析
 - [ ] `enrich_checkout()`：拉取购物车（必须非空）+ `checkout_handoff()` 获取跳转 URL
 
-**11.5 注册与组装**
+**5. 注册与组装**
 
 - [ ] `PRESENTATION_COMPONENTS` 字典：把 name → component 映射组装好
 - [ ] 在 `tools/registry.py` 注册：`present_products`、`present_comparison`、`present_plan`、`present_guide`、`checkout`、`present_suggestions`
 
-**11.6 测试**
+**6. 测试**
 
 - [ ] 写 `test_presentation.py`：payload 验证、enrich 钩子、拒绝映射、`price_delta` 计算
 
