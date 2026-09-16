@@ -534,7 +534,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 - [ ] `CheckoutPayload`：note + fulfillment_method
 - `PresentOrderStatusPayload` → Step 13 有了 `Order` 类型再加
 
-**4. 充实钩子** — `shopping_agent/enrichment.py`
+**4. 补全钩子** — `shopping_agent/enrichment.py`
 
 - [ ] `enrich_products()`：模型传 product_id 列表 → 从 `seen_products` 补全完整商品记录
 - [ ] `enrich_comparison()`：至少 2 个商品，计算 `price_delta`
