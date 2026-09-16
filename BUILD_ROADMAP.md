@@ -823,6 +823,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
   - `types.py`：`MemoryCategory`、`MemoryFact`、`ClockContext`、`remember()`、`PROVENANCE_CAP`
   - `config.py`：`BaseAgentConfig`（购物和商户的配置都继承它）
   - `fencing.py`：`Fence`、`sanitize_text`、`sanitize_label`、完整的围栏机制
+    - 迁移时对照源码补防回溯处理：当前 `shopping_agent/fencing.py` 的正则对超长重复输入会挂起，`test_fencing.py` 里省略的回溯上限测试一起补回
   - `memory.py`：存储、过滤、提取、运行时 — 完整子系统
   - `skills.py`：技能加载与注册
   - `prompt_assembly.py`：缓存断点管理
