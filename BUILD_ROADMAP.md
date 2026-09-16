@@ -471,33 +471,61 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 做什么
 
-- [ ] 实现 `commerce-common/commerce_common/presentation.py`：
-  - `PresentationComponent`：name + component + payload_model + enrich 钩子
-  - `run_presentation()`：验证 payload → 调用 enrich 补全服务端数据 → 发出 `ui` 事件
-  - `PresentationRefused`：enrich 失败时的异常（比如 product_id 解析不出来）
-- [ ] 实现 `shopping-agent/core/shopping_agent/enrichment.py`：
-  - `enrich_products()`：模型传入 product_id 列表，服务端从 `seen_products` 解析完整商品记录
-  - `enrich_comparison()`：至少 2 个商品，计算 `price_delta`
-  - `enrich_plan()`：每个步骤的 product_id 解析
-  - `enrich_checkout()`：拉取购物车（必须非空）+ 调用 `checkout_handoff()` 获取跳转 URL
-- [ ] 实现 `shopping-agent/core/shopping_agent/tools/presentation.py`（Step 07 跳过的文件，现在有消费者了）：
-  - `PresentProductsPayload`、`PresentComparisonPayload`、`PresentPlanPayload`、`PresentGuidePayload`、`CheckoutPayload`
-  - `PresentOrderStatusPayload` 等 Step 13 有了 `Order` 类型再加
-- [ ] 在 `tools/registry.py` 里注册展示工具：`present_products`、`present_comparison`、`present_plan`、`present_guide`、`checkout`
-  - `checkout` 的 enrich 用到 Step 06 就定义的 `checkout_handoff()`（可选方法，默认实现返回 `None`），这里给它一个返回跳转 URL 的实现
-- [ ] 实现 `present_suggestions`（建议芯片）：1-4 个简短建议，清洗后发出，结束当前对话轮次
-- [ ] 写 `test_presentation.py`：payload 验证、enrich 钩子、拒绝映射、price_delta 计算
+**11.1 前置依赖**
+
+- [ ] 实现 `commerce_common/streaming.py`（`presentation.py` 的返回类型）：
+  - `AgentEvent`：事件基类，`type` + `data`，带 `ui()` / `text_delta()` 等类方法
+  - `ToolOutcome`：工具调用结果，`result_text` + `events` + `is_error` + `blocked`
+- [ ] 在 `commerce_common/fencing.py` 补 `sanitize_label()` + `sanitize_suggestion_chips()`
+  （`PresentSuggestionsPayload` 的 validator 需要它们）
+
+**11.2 展示框架** — `commerce_common/presentation.py`
+
+- [ ] `PresentationComponent`：name + component + payload_model + enrich 钩子
+- [ ] `run_presentation()`：验证 payload → 调用 enrich 补全服务端数据 → 发出 `ui` 事件
+- [ ] `PresentationRefused`：enrich 失败时的异常（比如 product_id 解析不出来）
+- [ ] `PresentSuggestionsPayload`：1-4 条建议芯片，验证时自动清洗
+
+**11.3 Payload 定义** — `shopping_agent/tools/presentation.py`
+
+- [ ] `PresentProductsPayload`：picks 列表（product_id + reason）
+- [ ] `PresentComparisonPayload`：entries 列表（product_id + pros/cons）
+- [ ] `PresentPlanPayload`：steps 列表（label + product_ids）
+- [ ] `PresentGuidePayload`：sections 列表 + related_product_ids
+- [ ] `CheckoutPayload`：note + fulfillment_method
+- `PresentOrderStatusPayload` → Step 13 有了 `Order` 类型再加
+
+**11.4 充实钩子** — `shopping_agent/enrichment.py`
+
+- [ ] `enrich_products()`：模型传 product_id 列表 → 从 `seen_products` 补全完整商品记录
+- [ ] `enrich_comparison()`：至少 2 个商品，计算 `price_delta`
+- [ ] `enrich_plan()`：每个步骤的 product_id 解析
+- [ ] `enrich_checkout()`：拉取购物车（必须非空）+ `checkout_handoff()` 获取跳转 URL
+
+**11.5 注册与组装**
+
+- [ ] `PRESENTATION_COMPONENTS` 字典：把 name → component 映射组装好
+- [ ] 在 `tools/registry.py` 注册：`present_products`、`present_comparison`、`present_plan`、`present_guide`、`checkout`、`present_suggestions`
+
+**11.6 测试**
+
+- [ ] 写 `test_presentation.py`：payload 验证、enrich 钩子、拒绝映射、`price_delta` 计算
 
 #### 验证
 
-`pytest test_presentation.py`。模型调用 `present_products({picks: [{product_id: "p-1", reason: "..."}]})` →
-服务端从 `seen_products` 补全完整商品数据 → 返回 `ui` 事件。
+`pytest test_presentation.py`。
+
+验证流程：模型调用 `present_products({picks: [{product_id: "p-1", reason: "..."}]})`
+→ 服务端从 `seen_products` 补全完整商品数据 → 返回 `ui` 事件。
 
 #### 设计决策
 
-为什么模型只传 ID 和判断理由，不传商品名称和价格？这就是规则 3 —
-UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；名称、价格、图片等「事实」由服务端
-从数据库填充。这样模型不会编造价格，UI 永远准确。
+**为什么模型只传 ID 和判断理由，不传商品名称和价格？**
+
+这就是规则 3 — UI 是展示型工具调用。模型传 ID + 理由是它的「判断」；
+名称、价格、图片等「事实」由服务端从数据库填充。
+这样模型不会编造价格，UI 永远准确。
+
 参考 `shopping-agent/core/shopping_agent/enrichment.py` 的 `enrich_products()`。
 
 ---
