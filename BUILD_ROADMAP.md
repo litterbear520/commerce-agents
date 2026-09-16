@@ -523,7 +523,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 - [ ] `PresentationComponent`：name + component + payload_model + enrich 钩子
 - [ ] `run_presentation()`：验证 payload → 调用 enrich 补全服务端数据 → 发出 `ui` 事件
 - [ ] `PresentationRefused`：enrich 失败时的异常（比如 product_id 解析不出来）
-- [ ] `PresentSuggestionsPayload`：1-4 条建议芯片，验证时自动清洗
+- [ ] `PresentSuggestionsPayload`：1-4 条建议按钮，验证时自动清洗
 
 **3. Payload 定义** — `shopping_agent/tools/presentation.py`
 
@@ -700,7 +700,7 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
     3. 数据锚定规则决定首轮是否强制工具
     4. 多轮循环（最多 `max_tool_iterations` 轮）
     5. 每轮流式响应 + 工具分派 + UI 事件
-    6. `close_on_presentation`：如果一轮的结果全是纯展示类调用 + 建议芯片（没有需要进一步处理的工具），直接结束本轮
+    6. `close_on_presentation`：如果一轮的结果全是纯展示类调用 + 建议按钮（没有需要进一步处理的工具），直接结束本轮
 
 - **验证**：`pytest shopping-agent/runtime-messages-api/tests/test_orchestrator.py` 里的流式帧和展示关闭用例（假模型集成测试）；用真模型跑一遍任务集，事件顺序对、最终状态对。
 
@@ -1121,8 +1121,8 @@ curl http://localhost:8000/api/health
 
 - [ ] 实现 `examples/web-shared/storefront/Shell.tsx`：`StoreShell` — 应用栏（品牌、标签页、Activity 按钮、购物袋、头像）、`Composer`（聊天输入框）、侧面板（购物车抽屉）
 - [ ] 实现 `examples/web-shared/Transcript.tsx`：对话视图 — 渲染 `ChatItem[]`（文本、错误、UI 块）
-- [ ] 实现 `examples/web-shared/Composer.tsx`：聊天输入 — 发送消息、芯片建议
-- [ ] 实现 `examples/web-shared/Suggestions.tsx`：建议芯片栏
+- [ ] 实现 `examples/web-shared/Composer.tsx`：聊天输入 — 发送消息、建议按钮
+- [ ] 实现 `examples/web-shared/Suggestions.tsx`：建议按钮栏
 - [ ] 实现 `examples/web-shared/Inspector.tsx`：Activity 面板（工具调用追踪 + 记忆查看器）
 - [ ] 实现 `examples/web-shared/generative.tsx`：`GenerativeBlockProps` 基础 props + `UnknownBlock` fallback
 - [ ] 创建 `examples/retail/storefront-web/` Next.js 应用（端口 3000）：
