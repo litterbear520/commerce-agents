@@ -614,10 +614,10 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 做什么
 
-- [ ] 在 `types.py` 添加 `Order`、`OrderItem`、`OrderStatus`、`Policy`、`UserPreferences`、`FulfillmentOption`、`CheckoutHandoff`
+- [ ] 在 `types.py` 添加 `Order`、`OrderItem`、`OrderStatus`、`Policy`、`FulfillmentOption`（`UserPreferences` 和 `CheckoutHandoff` 已在 Step 06 加入）
 - [ ] 在 `backend.py` 添加 5 个新抽象方法：`get_orders`、`get_order`、`search_policies`、`get_preferences`、`get_fulfillment_options`（ABC 从 6 方法扩展到 11 方法）
 - [ ] 在 `FakeBackend` 里实现这些新方法
-- [x] 在 `tools/registry.py` 注册这些工具：`get_orders`、`get_order_status`、`search_policies`、`get_preferences`、`get_fulfillment_options`
+- [ ] 在 `tools/registry.py` 注册这些工具：`get_orders`、`get_order_status`、`search_policies`、`get_preferences`、`get_fulfillment_options`
 - [ ] 在 `executor.py` 实现对应 handler + `serialization.py` 的 `order_payload()`、`policies_payload()`、`fulfillment_payload()`
 - [ ] 实现 `gates.py` 的 `remember_order_items()`：把订单商品加入已知来源记录，让用户能直接重新购买以前买过的东西
 - [ ] 加 `PresentOrderStatusPayload` 和 `present_order_status` 展示工具（Step 11 留下的）
