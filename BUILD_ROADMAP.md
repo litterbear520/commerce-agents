@@ -577,20 +577,20 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 做什么
 
-- [ ] 实现 `commerce-common/commerce_common/skills.py`：
+- [x] 实现 `commerce-common/commerce_common/skills.py`：
   - `Skill`：name + description + body
   - `parse_skill_md()`：解析 YAML frontmatter（name、description）+ Markdown body
   - `SkillRegistry`：按名称排序，`index_block()` 生成给提示词的索引，`get_instructions()` 返回技能正文
-- [ ] 写前 3 个购物技能 `shopping-agent/skills/*/SKILL.md`——只写现有工具能支撑的：
+- [x] 写前 3 个购物技能 `shopping-agent/skills/*/SKILL.md`——只写现有工具能支撑的：
   - `search-discovery`：多约束搜索、短名单、比较流程
   - `planning-goals`：多物品规划（5 个事实框架、3-8 步、预算分配）
   - `purchase-research`：先教标准再推荐
   - `customer-care`（售后）等 Step 13 有了订单和政策工具再写；`memory-personalization` 等 Step 16 有了记忆工具再写。
   技能引用不存在的工具，模型会去调用，然后得到「未知工具」——技能随能力启用
-- [ ] 在 `tools/registry.py` 里加 `load_skill` 工具：模型按名称加载技能的详细规则
-- [ ] 在 `prompt.py` 的静态部分加技能索引：`- \`name — description` 列表
+- [x] 在 `tools/registry.py` 里加 `load_skill` 工具：模型按名称加载技能的详细规则
+- [x] 在 `prompt.py` 的静态部分加技能索引：`- \`name — description` 列表
 
-- [ ] 写 `test_skills.py`：frontmatter 解析、技能加载、注册表索引稳定性
+- [x] 写 `test_skills.py`：frontmatter 解析、技能加载、注册表索引稳定性
 
 #### 验证
 
