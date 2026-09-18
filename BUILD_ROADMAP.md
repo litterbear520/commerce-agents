@@ -645,20 +645,28 @@ Anthropic 的 prompt caching 能把重复内容的成本降到 1/10，但前提�
 
 #### 做什么
 
-- [ ] 实现 `commerce-common/commerce_common/grounding.py`：
-  - `matches_terms_and_cues(text, terms, cues)`：文本里同时出现「意图词」和「线索词」才触发
-  - `GroundingRule`：name + tool + fires() → 如果匹配则返回工具参数，否则返回 None
+- [ ] 扩展 `shopping_agent/config.py` 的 `ShoppingAgentConfig`：
+  - 加系统开关 `enable_cart`、`enable_orders`、`enable_policies`、`enable_fulfillment`
+  - 加三组 grounding gate 开关和对应词汇表：`policy_grounding_gate` + `policy_intent_terms` / `policy_intent_cues`，`order_grounding_gate` + `order_intent_terms` / `order_intent_cues`，`catalog_grounding_gate` + `product_id_patterns`
+  - 加 `absent_tools()` 方法：按系统开关返回应排除的工具名
+- [ ] 实现 `commerce_common/grounding.py`：
+  - `matches_any(text, needles)`：大小写不敏感的整词匹配
+  - `matches_terms_and_cues(text, terms, cues)`：文本里同时出现「意图词」和「线索词」才触发；`numeric_literals` 选项让金额/百分比也算意图词
+  - `find_token(text, patterns)`：返回最长的正则匹配（大小写不敏感），用于提取 product ID
+  - `GroundingRule`：name + tool + fires() → 如果匹配则返回工具参数，否则返回 None；可选 `prefetch_intro` 渲染预取引导行
   - `first_forced_tool(rules, config, text, state)`：按优先级依次检查规则，第一个触发的决定首轮强制调用哪个工具
-- [ ] 实现 `shopping-agent/core/shopping_agent/grounding.py`：三条规则按优先级：
+- [ ] 实现 `shopping_agent/grounding.py`：三条规则按优先级：
   1. **政策规则**（`search_policies`）：用户问退换、运费、保修等
   2. **订单规则**（`get_orders`）：用户问订单状态、配送进度
-  3. **目录规则**（`get_product_details`）：用户消息里包含 product ID 模式（如 `SKU-1234`）
+  3. **目录规则**（`get_product_details`）：用户消息里包含 product ID 模式（如 `SKU-1234`），且该 ID 不在 `seen_products` 里
 - [ ] 在循环的第一轮用 `tool_choice: {"type": "tool", "name": "..."}` 强制模型调用该工具
-- [ ] 写 `test_grounding.py`：强制工具选择、优先级、配置开关、词汇表扩展
+- [ ] 写测试（两个层级）：
+  - `commerce_common/tests/test_grounding.py`：通用匹配逻辑（整词匹配、terms+cues 组合、金额/百分比、find_token、规则优先级）
+  - `shopping_agent/tests/test_grounding.py`：购物场景规则（三条规则触发、购物消息不触发、五位订单号不算商品 ID、优先级、已见 ID 不重查、配置开关、词汇表扩展）
 
 #### 验证
 
-`pytest shopping_agent/tests/test_grounding.py`（单元测试）。默认词表是英文的，验证时用英文输入：
+`pytest commerce_common/tests/test_grounding.py shopping_agent/tests/test_grounding.py`（单元测试）。默认词表是英文的，验证时用英文输入：
 "Can I return these headphones?" → 强制调用 `search_policies` → 拿到退货政策 → 基于政策回答。
 "Is SKU-1234 in stock?" → 强制调用 `get_product_details("SKU-1234")`——目录规则匹配的是 ID 的正则表达式
 （`product_id_patterns`），所以即使是中文句子，只要里面带 ID 也能触发。
