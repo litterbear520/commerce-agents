@@ -18,16 +18,23 @@ from typing import Any
 _MONEY_LITERAL = re.compile(r"\$\s?\d")
 _PERCENT_LITERAL = re.compile(r"\d+\s?%")
 
+# A Latin letter or digit: without one there is no word boundary to anchor to. Scripts
+# written without spaces never satisfy ``\b`` between two characters, so a lexicon entry
+# with no Latin letter or digit matches as a substring instead.
+_WORD_BOUNDED = re.compile(r"[A-Za-z0-9]")
+
 
 def matches_any(text: str, needles: Sequence[str]) -> bool:
-    """Case-insensitive whole-word (or whole-phrase) match; ``?`` matches literally."""
+    """Case-insensitive whole-word (or whole-phrase) match; ``?`` matches literally. An
+    entry with no Latin letter or digit matches as a substring, because the scripts that
+    need it are written without word boundaries."""
     lowered = text.lower()
     for needle in needles:
         cleaned = needle.lower().strip()
         if not cleaned:
             continue
-        if cleaned == "?":
-            if "?" in lowered:
+        if cleaned == "?" or not _WORD_BOUNDED.search(cleaned):
+            if cleaned in lowered:
                 return True
         elif re.search(rf"\b{re.escape(cleaned)}\b", lowered):
             return True

@@ -15,6 +15,9 @@ from commerce_common.grounding import (
 TERMS = ("returns", "fee", "terms")
 CUES = ("?", "how", "tell me")
 PATTERNS = (r"\bSKU-\d{3}\b", r"\bSKU-[A-Z]{2,4}-\d{3}(?:-[A-Z]{2})?\b")
+# A lexicon in a script written without spaces: these entries take the substring branch.
+UNSPACED_TERMS = ("退货", "手续费")
+UNSPACED_CUES = ("？", "怎么")
 
 
 @pytest.mark.parametrize(
@@ -31,6 +34,21 @@ PATTERNS = (r"\bSKU-\d{3}\b", r"\bSKU-[A-Z]{2,4}-\d{3}(?:-[A-Z]{2})?\b")
 )
 def test_a_whole_word_term_and_a_cue_must_both_appear(text, fires):
     assert matches_terms_and_cues(text, TERMS, CUES) is fires
+
+
+@pytest.mark.parametrize(
+    ("text", "fires"),
+    [
+        ("开封过的商品怎么退货", True),
+        ("手续费怎么算", True),
+        ("退货", False),  # a term with no cue
+        ("怎么去你们门店", False),  # a cue with no term
+        ("这个咖啡怎么样", False),
+        ("", False),
+    ],
+)
+def test_a_term_without_latin_letters_matches_as_a_substring(text, fires):
+    assert matches_terms_and_cues(text, UNSPACED_TERMS, UNSPACED_CUES) is fires
 
 
 def test_an_empty_lexicon_never_fires():
